@@ -4616,6 +4616,31 @@
           onlineP2Input.fi = !!msg.fi;
           onlineP2Input.da = !!msg.da;
           if (msg.bm) onlineP2Input.bm = true;
+          // Sync P2 exact position + wire from guest
+          if (msg.px !== undefined && gameState.active) {
+            const p2 = players[1];
+            if (p2 && p2.alive) {
+              p2.x = msg.px; p2.z = msg.pz;
+              if (p2.group) { p2.group.position.x = msg.px; p2.group.position.z = msg.pz; p2.group.rotation.y = msg.rot || 0; }
+            }
+            // Wire points from guest
+            if (msg.wp && p2 && p2.alive) {
+              p2.isDrawingWire = true;
+              p2.wirePoints = msg.wp.map(pt => ({ x: pt[0], z: pt[1] }));
+              if (p2.wireMesh && msg.wp.length >= 2) {
+                const vPts = msg.wp.map(pt => new THREE.Vector3(pt[0], 3.5, pt[1]));
+                const curve = new THREE.CatmullRomCurve3(vPts);
+                if (p2.wireMesh.geometry) p2.wireMesh.geometry.dispose();
+                p2.wireMesh.geometry = new THREE.TubeGeometry(curve, Math.max(msg.wp.length * 2, 8), 2.5, 6, false);
+                if (p2.wireOuterMesh.geometry) p2.wireOuterMesh.geometry.dispose();
+                p2.wireOuterMesh.geometry = new THREE.TubeGeometry(curve, Math.max(msg.wp.length * 2, 8), 3.2, 6, false);
+                p2.wireMesh.visible = true; p2.wireOuterMesh.visible = true;
+                if (p2.startMarker) { p2.startMarker.position.set(msg.wp[0][0], 3.5, msg.wp[0][1]); p2.startMarker.visible = true; }
+              }
+            } else if (!msg.wp && p2) {
+              p2.isDrawingWire = false;
+            }
+          }
         } else if (msg.t === 'rtc_offer') {
           if (!_rtcPeer) return;
           _rtcPeer.setRemoteDescription(msg.sdp)
@@ -4942,10 +4967,21 @@
         if (keys['KeyD'] || keys['ArrowRight']) vx += 1;
         vx += touch.vx; vz += touch.vz;
         const len = Math.hypot(vx, vz); if (len > 1) { vx /= len; vz /= len; }
-        const fi = !!(players[1].isDrawingWire); // local self-predicted state
+        const p2 = players[1];
+        const fi = !!(p2.isDrawingWire);
         const da = !!(keys['ShiftLeft'] || keys['ShiftRight'] || touch.dash);
         const bm = !!_guestBombQueued; _guestBombQueued = false;
-        const _im = JSON.stringify({ t: 'input', vx: +vx.toFixed(2), vz: +vz.toFixed(2), fi, da, bm });
+        const wPts = (fi && p2.wirePoints && p2.wirePoints.length >= 2)
+          ? p2.wirePoints.map(wp => [Math.round(wp.x), Math.round(wp.z)]) : null;
+        const _im = JSON.stringify({
+          t: 'input',
+          vx: +vx.toFixed(2), vz: +vz.toFixed(2),
+          fi, da, bm,
+          px: Math.round(p2.x * 10) / 10,
+          pz: Math.round(p2.z * 10) / 10,
+          rot: Math.round((p2.group ? p2.group.rotation.y : 0) * 100) / 100,
+          wp: wPts
+        });
         if (!_rtcSend(_im) && onlineWs && onlineWs.readyState === WebSocket.OPEN) onlineWs.send(_im);
       }
 
