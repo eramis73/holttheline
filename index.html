@@ -1550,6 +1550,7 @@
         el.style.top = y + 'px';
         floatContainer.appendChild(el);
         setTimeout(() => el.remove(), 1200);
+        if (gameMode === 'online-host') _netEvents.push({t:'txt', x:Math.round(pos3D.x), y:Math.round(pos3D.y), z:Math.round(pos3D.z), msg:text, c:color||'#fff'});
       }
 
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -1730,6 +1731,7 @@
       let onlineP2Input = { vx: 0, vz: 0, fi: false, da: false, bm: false };
       let _zombieNetId = 0, _hostStateInt = null, _guestInputInt = null;
       let _levelSeed = 0, _lastSeed = 0, _guestBombQueued = false;
+      let _netEvents = []; // one-shot visual events flushed each state send
       let _guestLastState = null;
       const guestZombieMap = new Map();
       function _seedRng(seed) {
@@ -3714,6 +3716,7 @@
         createBarrelBlastRays(pos, blastRange, ranges);
         createSmokePuff(pos.clone());
         createSmokePuff(pos.clone().add(new THREE.Vector3(8, 0, 0)));
+        if (gameMode === 'online-host') _netEvents.push({t:'exp', x:Math.round(pos.x), z:Math.round(pos.z), r:blastRange});
       }
 
       function createBarrelBlastRays(pos, blastRange, ranges) {
@@ -4701,6 +4704,30 @@
 
         const sFlowers = gameState.entities.flowers.map(f => f.active ? 1 : 0);
 
+        // Arbalest cannon arrows in flight
+        const sCannons = [];
+        for (let i = 0; i < cannons.length; i++) {
+          const c = cannons[i];
+          if (!c.active) continue;
+          sCannons.push([i, Math.round(c.ballX), Math.round(c.ballZ), c.ball.visible ? 1 : 0]);
+        }
+
+        // Wall cannon sweeps + balls
+        const sWallCannons = [];
+        for (let i = 0; i < wallCannons.length; i++) {
+          const wc = wallCannons[i];
+          if (!wc.active) continue;
+          sWallCannons.push([i,
+            Math.round(wc.sweepAngle * 100) / 100,
+            Math.round(wc.ballX), Math.round(wc.ballZ),
+            wc.ballFlying ? 1 : 0,
+            Math.round(wc.ball.position.y)
+          ]);
+        }
+
+        // Flush one-shot events
+        const sEvents = _netEvents.length ? _netEvents.splice(0) : undefined;
+
         return JSON.stringify({
           t: 's',
           p: sPlayers,
@@ -4709,7 +4736,10 @@
           ba: sBarrels,
           k: gameState.kills,
           tm: Math.round(gameState.levelTime),
-          fl: sFlowers
+          fl: sFlowers,
+          cn: sCannons,
+          wn: sWallCannons,
+          ev: sEvents
         });
       }
 
@@ -4754,7 +4784,7 @@
               }
             }
             if (pd[11] !== undefined) p.activeBombCount = pd[11];
-            if (pd[12] !== undefined) p.shields = pd[12];
+            if (pd[12] !== undefined) { p.shields = pd[12]; p.shield = pd[12] > 0; }
 
             if (p.group) {
               p.group.visible = p.alive || p.sinking;
@@ -4802,6 +4832,7 @@
               z._tX = zd[1]; z._tZ = zd[2]; // Target positions for lerp
               z._tR = zd[3];
               z.hp = zd[4];
+              const prevShocked = z.shocked;
               z.shocked = !!zd[5];
               z.isFalling = !!zd[6];
               z.teamIdx = zd[7];
@@ -4813,6 +4844,26 @@
                 z.dropType = _newDrop;
                 Object.values(z._dropMeshes).forEach(m => { m.visible = false; });
                 if (_newDrop && z._dropMeshes[_newDrop]) z._dropMeshes[_newDrop].visible = true;
+              }
+              // Shocked material transition
+              if (z.shocked !== prevShocked) {
+                if (z.shocked) {
+                  z.group.traverse(c => {
+                    if (c.isMesh && !c.userData.isOutline) {
+                      const sm = (c.userData.origMat || c.material).clone();
+                      sm.emissive = new THREE.Color(0x00e5ff); sm.emissiveIntensity = 3.0;
+                      c.material = sm; c.userData.shockMat = sm;
+                    }
+                  });
+                  z.group.traverse(c => { if (c.userData.isOutline) c.visible = true; });
+                } else {
+                  z.group.traverse(c => {
+                    if (c.isMesh && !c.userData.isOutline && c.userData.origMat) {
+                      c.material = c.userData.origMat; c.userData.shockMat = null;
+                    }
+                  });
+                  z.group.traverse(c => { if (c.userData.isOutline) c.visible = false; });
+                }
               }
             }
           }
@@ -4843,6 +4894,39 @@
           for (let i = 0; i < Math.min(msg.fl.length, fls.length); i++) {
             if (!msg.fl[i] && fls[i].active) { fls[i].active = false; fls[i].mesh.visible = false; }
           }
+        }
+
+        // Arbalest cannon arrows
+        if (msg.cn !== undefined) {
+          const activeSet = new Set(msg.cn.map(cd => cd[0]));
+          cannons.forEach((c, i) => {
+            if (!c.active) return;
+            const cd = msg.cn.find(d => d[0] === i);
+            if (cd) { c.ball.visible = !!cd[3]; if (cd[3]) c.ball.position.set(cd[1], 8, cd[2]); }
+            else c.ball.visible = false;
+          });
+        }
+
+        // Wall cannon sweeps + balls
+        if (msg.wn !== undefined) {
+          wallCannons.forEach((wc, i) => {
+            if (!wc.active) return;
+            const wd = msg.wn.find(d => d[0] === i);
+            if (wd) {
+              wc.pivot.rotation.y = wd[1];
+              wc.ball.visible = !!wd[4];
+              if (wd[4]) wc.ball.position.set(wd[2], wd[5], wd[3]);
+              else wc.shadowMesh.visible = false;
+            } else { wc.ball.visible = false; wc.shadowMesh.visible = false; }
+          });
+        }
+
+        // One-shot events (explosions, floating texts)
+        if (msg.ev) {
+          msg.ev.forEach(ev => {
+            if (ev.t === 'exp') createSharedExplosion(new THREE.Vector3(ev.x, 0, ev.z), ev.r);
+            else if (ev.t === 'txt') showFloatingText(new THREE.Vector3(ev.x, ev.y, ev.z), ev.msg, ev.c);
+          });
         }
 
         if (msg.k !== undefined) gameState.kills = msg.k;
@@ -6426,9 +6510,25 @@
             }
           }
 
-          // Zombie lerp + walk animation
+          // Zombie lerp + walk/shock/fall animation
           guestZombieMap.forEach(z => {
             if (!z.active || !z.group) return;
+            // Falling: tilt forward until despawn
+            if (z.isFalling) {
+              z.group.rotation.x -= dt * 3.0;
+              return;
+            }
+            // Shocked: flicker material + vibrate
+            if (z.shocked) {
+              z.group.traverse(c => {
+                if (c.isMesh && c.userData.shockMat) {
+                  c.userData.shockMat.emissiveIntensity = Math.random() < 0.65 ? (2.5 + Math.random() * 3.5) : 0.2;
+                }
+              });
+              z.group.position.x += (Math.random() - 0.5) * 1.5;
+              z.group.position.z += (Math.random() - 0.5) * 1.5;
+              return;
+            }
             if (z._tX !== undefined) {
               const zdx = z._tX - z.group.position.x, zdz = z._tZ - z.group.position.z, zDist = Math.hypot(zdx, zdz);
               let movedDist = 0;
@@ -6441,7 +6541,7 @@
                 z.group.rotation.y += (z._tR - z.group.rotation.y) * 0.22;
                 movedDist = Math.hypot(z.group.position.x - px, z.group.position.z - pz);
               }
-              if (!z.isFalling && !z.shocked && zDist > 0.5) {
+              if (zDist > 0.5) {
                 z._walkCycle = (z._walkCycle || 0) + movedDist * 0.55;
                 const wc = z._walkCycle;
                 if (z.lLeg) z.lLeg.rotation.x = Math.sin(wc) * 0.8;
@@ -6456,6 +6556,17 @@
               } else {
                 z.group.position.y = 0;
               }
+            }
+          });
+
+          // Shield mesh pulse for both players
+          players.forEach(p => {
+            if (!p._shieldMesh) return;
+            p._shieldMesh.visible = !!p.shield;
+            if (p.shield) {
+              const pulse = 1.0 + Math.sin(time * 4) * 0.06;
+              p._shieldMesh.scale.setScalar(pulse);
+              p._shieldMesh.material.opacity = 0.22 + Math.sin(time * 4) * 0.08;
             }
           });
 
