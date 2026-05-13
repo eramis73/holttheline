@@ -2829,8 +2829,8 @@
         playSfx('pickup');
         switch (effect) {
           case 'speed':
-            p.buffSpeedTime = 10;
-            showFloatingText(pos, '⚡ SPEED! 10s', '#00e5ff');
+            p.wireMeter = (p.wireMeter || 0) + 150;
+            showFloatingText(pos, '⚡ +150m TEL!', '#00e5ff');
             break;
           case 'shield':
             p.shields = (p.shields || 0) + 1;
@@ -5525,7 +5525,11 @@
           players[0].wireMeter = gameConfig.player.wireLimit; players[1].wireMeter = gameConfig.player.wireLimit;
           gameState._carryWire = false;
           gameState.dropBudget = { bomb: gameConfig.zombieDrops.bombCount, shield: gameConfig.zombieDrops.shieldCount, wire: gameConfig.zombieDrops.wireCount };
+          const _mb0 = players[0].bombs || 0, _ms0 = players[0].shields || 0;
+          const _mb1 = players[1].bombs || 0, _ms1 = players[1].shields || 0;
           resetPlayer(players[0]); resetPlayer(players[1]);
+          players[0].bombs = _mb0; players[0].shields = _ms0; players[0].shield = _ms0 > 0;
+          players[1].bombs = _mb1; players[1].shields = _ms1; players[1].shield = _ms1 > 0;
           players[0].x = -40; players[0].z = 0; players[0].group.position.set(-40, 0, 0);
           players[1].x = 40; players[1].z = 0; players[1].group.position.set(40, 0, 0);
           players[0].group.visible = true; players[1].group.visible = true;
@@ -5545,7 +5549,11 @@
           players[0].wireMeter = gameConfig.player.wireLimit; players[1].wireMeter = gameConfig.player.wireLimit;
           gameState._carryWire = false;
           gameState.dropBudget = { bomb: gameConfig.zombieDrops.bombCount, shield: gameConfig.zombieDrops.shieldCount, wire: gameConfig.zombieDrops.wireCount };
+          const _ob0 = players[0].bombs || 0, _os0 = players[0].shields || 0;
+          const _ob1 = players[1].bombs || 0, _os1 = players[1].shields || 0;
           resetPlayer(players[0]); resetPlayer(players[1]);
+          players[0].bombs = _ob0; players[0].shields = _os0; players[0].shield = _os0 > 0;
+          players[1].bombs = _ob1; players[1].shields = _os1; players[1].shield = _os1 > 0;
           players[0].x = -40; players[0].z = 0; players[0].group.position.set(-40, 0, 0);
           players[1].x = 40; players[1].z = 0; players[1].group.position.set(40, 0, 0);
           players[0].group.visible = true; players[1].group.visible = true;
