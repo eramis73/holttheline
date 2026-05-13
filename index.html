@@ -7284,6 +7284,14 @@
                   cannonballKillZombie(z, c.dx, c.dz);
                 }
               });
+              // Arrow hits ground bombs — detonate immediately
+              activeBombs.forEach(b => {
+                if (b.done) return;
+                if (Math.hypot(c.ballX - b.group.position.x, c.ballZ - b.group.position.z) < 18) {
+                  b.fuseTimer = 0;
+                }
+              });
+
               // Hitting cage or 3D obstacles (rock/cactus/stone) — arrow drops and disappears
               let arrowHit = false;
               if (cagedGirl && gameState.cagePos &&
