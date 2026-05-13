@@ -5600,12 +5600,6 @@
           gameState.mpCageSkip = false;
         }
 
-        // Skip start screen if portaling in
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('portal') === 'true') {
-          document.getElementById('start-screen').style.display = 'none';
-          gameState.active = true;
-        }
 
         // Apply MP difficulty overrides
         if (isMP() && gameState._mpDiff) {
@@ -5659,65 +5653,8 @@
 
         updateHUD();
 
-        // ── VIBE JAM PORTAL ──────────────────────────────────────────────────
-        if (_vjPortal) { worldGroup.remove(_vjPortal.grp); _vjPortal = null; }
-        (function () {
-          const px = 0, pz = ARENA_LIMIT - 22;
-          const grp = new THREE.Group();
-          grp.position.set(px, 0, pz);
-
-          // Inner glow disc
-          const discMat = new THREE.MeshBasicMaterial({ color: 0xee88ff, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false });
-          const disc = new THREE.Mesh(new THREE.CircleGeometry(19, 48), discMat);
-          disc.rotation.x = Math.PI / 2; disc.position.y = 22;
-          grp.add(disc);
-
-          // Ground ring glow
-          const groundMat = new THREE.MeshBasicMaterial({ color: 0xcc44ff, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false });
-          const groundRing = new THREE.Mesh(new THREE.RingGeometry(18, 26, 48), groundMat);
-          groundRing.rotation.x = -Math.PI / 2; groundRing.position.y = 0.5;
-          grp.add(groundRing);
-
-          // Point light
-          const light = new THREE.PointLight(0xcc44ff, 600, 180);
-          light.position.set(0, 22, 0); grp.add(light);
-
-          // Label (canvas texture)
-          const cv = document.createElement('canvas'); cv.width = 512; cv.height = 96;
-          const ctx = cv.getContext('2d');
-          ctx.fillStyle = 'rgba(0,0,0,0)';
-          ctx.fillRect(0, 0, 512, 96);
-          ctx.font = 'bold 48px monospace';
-          ctx.textAlign = 'center';
-          ctx.fillStyle = '#ff88ff';
-          ctx.shadowColor = '#cc00ff'; ctx.shadowBlur = 18;
-          ctx.fillText('✨ VIBE JAM PORTAL', 256, 64);
-          const tex = new THREE.CanvasTexture(cv);
-          const lblMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false });
-          const lbl = new THREE.Mesh(new THREE.PlaneGeometry(80, 15), lblMat);
-          lbl.position.set(0, 52, 0); grp.add(lbl);
-
-          worldGroup.add(grp);
-          _vjPortal = { grp, disc, groundRing, light, lbl, x: px, z: pz, entered: false };
-        })();
-
-        // Start Portal (if coming from another game)
-        if (urlParams.get('portal') === 'true') {
-          const ref = urlParams.get('ref') || 'vibejam.cc';
-          const startX = 0, startZ = -ARENA_LIMIT + 22;
-          players[0].x = startX; players[0].z = startZ;
-          players[0].group.position.set(startX, 0, startZ);
-
-          // Spawn ring effect
-          const sGrp = new THREE.Group(); sGrp.position.set(startX, 0, startZ);
-          const sRing = new THREE.Mesh(new THREE.RingGeometry(18, 22, 32), new THREE.MeshBasicMaterial({ color: 0x44ffff, transparent: true, opacity: 0.8 }));
-          sRing.rotation.x = -Math.PI / 2; sRing.position.y = 1; sGrp.add(sRing);
-          worldGroup.add(sGrp);
-          setTimeout(() => worldGroup.remove(sGrp), 2000);
-        }
       }
 
-      let _vjPortal = null;
 
       // ─── AUDIO ENGINE ───────────────────────────────────────────────────────
       let _audCtx = null, _musicSrc = null, _musicGainNode = null, _sfxGainNode = null;
@@ -6313,20 +6250,6 @@
           gameState.lakes.forEach(lk => { if (Math.hypot(x - lk.x, z - lk.z) < lk.r - 2.0) dead = true; });
           return dead;
         };
-
-        // ── VIBE JAM PORTAL: animate + collision (all modes) ─────────────────
-        if (_vjPortal && !_vjPortal.entered) {
-          _vjPortal.groundRing.rotation.z -= dt * 0.5;
-          const pulse = 0.15 + Math.sin(time * 3) * 0.08;
-          _vjPortal.disc.material.opacity = pulse;
-          _vjPortal.light.intensity = 500 + Math.sin(time * 4) * 200;
-          const localP = gameMode === 'online-guest' ? players[1] : players[0];
-          if (localP && localP.alive && Math.hypot(localP.x - _vjPortal.x, localP.z - _vjPortal.z) < 26) {
-            _vjPortal.entered = true;
-            const params = new URLSearchParams({ ref: location.href, color: localP.teamColor || 'blue', speed: '5' });
-            setTimeout(() => { window.location.href = 'https://vibejam.cc/portal/2026?' + params.toString(); }, 300);
-          }
-        }
 
         // ── ONLINE GUEST: early return — render received state only ──────────
         if (gameMode === 'online-guest') {
@@ -7898,25 +7821,6 @@
           }
 
         }
-        // ── VIBE JAM PORTAL COLLISION ─────────────────────────────────────────
-        if (_vjPortal && !_vjPortal.entered && gameState.active && !gameState.paused) {
-          const p0 = players[0];
-          const dx = p0.x - _vjPortal.x, dz = p0.z - _vjPortal.z;
-          if (Math.hypot(dx, dz) < 20) {
-            _vjPortal.entered = true;
-            vibe([100, 50, 100, 50, 400]);
-            showFloatingText(p0.group.position, "PORTAL ENTERED! 🌀", "#ee88ff");
-            setTimeout(() => {
-              const up = new URLSearchParams();
-              up.set('portal', 'true');
-              up.set('ref', window.location.hostname);
-              up.set('color', 'blue');
-              up.set('hp', '100');
-              window.location.href = "https://vibejam.cc/portal/2026?" + up.toString();
-            }, 800);
-          }
-        }
-
         // Continuously update timers in HUD
         if (gameState.active) { updateHUD(); if (isMP()) updateMpHud(); }
 
