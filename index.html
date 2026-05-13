@@ -7288,6 +7288,14 @@
                   b.fuseTimer = 0;
                 }
               });
+              // Arrow hits barrels — trigger blast
+              gameState.entities.barrels.forEach(b => {
+                if (!b.active) return;
+                if (Math.hypot(c.ballX - b.mesh.position.x, c.ballZ - b.mesh.position.z) < 16) {
+                  b.active = false; b.mesh.visible = false;
+                  triggerBarrelBlast(b.mesh.position, 0);
+                }
+              });
 
               // Hitting cage or 3D obstacles (rock/cactus/stone) — arrow drops and disappears
               let arrowHit = false;
