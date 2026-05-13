@@ -2749,18 +2749,7 @@
         return all;
       }
 
-      function spawnBombPhaseDiamond() {
-        let rx, rz, ok = false, att = 0;
-        while (!ok && att < 80) {
-          att++;
-          rx = (Math.random() - 0.5) * 320;
-          rz = (Math.random() - 0.5) * 320;
-          if (Math.hypot(rx, rz) < 30) continue;
-          let blocked = false;
-          if (gameState.lakes) gameState.lakes.forEach(lk => { if (Math.hypot(rx - lk.x, rz - lk.z) < lk.r + 12) blocked = true; });
-          players.forEach(p => { if (p.alive && Math.hypot(p.x - rx, p.z - rz) < 35) blocked = true; });
-          if (!blocked) ok = true;
-        }
+      function _buildDiamondMesh(scale) {
         const g = new THREE.Group();
         const top = new THREE.Mesh(geoCache.dTop, matCache.diamond);
         top.position.y = 0; top.castShadow = true;
@@ -2770,7 +2759,30 @@
         bot.rotation.x = Math.PI; bot.position.y = -4; bot.castShadow = true;
         bot.add(new THREE.LineSegments(new THREE.EdgesGeometry(geoCache.dBot), matCache.dLine));
         g.add(bot);
-        g.scale.setScalar(2.4);
+        g.scale.setScalar(scale);
+        return g;
+      }
+
+      function spawnBombPhaseDiamond(forceX, forceZ) {
+        let rx = forceX, rz = forceZ;
+        if (rx === undefined) {
+          let ok = false, att = 0;
+          while (!ok && att < 80) {
+            att++;
+            rx = (Math.random() - 0.5) * 320;
+            rz = (Math.random() - 0.5) * 320;
+            if (Math.hypot(rx, rz) < 30) continue;
+            let blocked = false;
+            if (gameState.lakes) gameState.lakes.forEach(lk => { if (Math.hypot(rx - lk.x, rz - lk.z) < lk.r + 12) blocked = true; });
+            players.forEach(p => { if (p.alive && Math.hypot(p.x - rx, p.z - rz) < 35) blocked = true; });
+            if (!blocked) ok = true;
+          }
+          if (gameMode === 'online-host') {
+            const _flMsg = JSON.stringify({ t: 'fl_add', x: Math.round(rx), z: Math.round(rz) });
+            if (!_rtcSend(_flMsg) && onlineWs && onlineWs.readyState === WebSocket.OPEN) onlineWs.send(_flMsg);
+          }
+        }
+        const g = _buildDiamondMesh(2.4);
         g.position.set(rx, 8, rz);
         worldGroup.add(g);
         gameState.entities.flowers.push({
@@ -4591,6 +4603,8 @@
           }
           gameState.zombiesSpawned = 0;
           guestZombieMap.clear();
+        } else if (msg.t === 'fl_add') {
+          if (gameMode === 'online-guest' && gameState.entities) spawnBombPhaseDiamond(msg.x, msg.z);
         } else if (msg.t === 's') {
           _guestLastState = msg;
         } else if (msg.t === 'input') {
@@ -4682,6 +4696,8 @@
           if (brs[i].active) sBarrels.push(i);
         }
 
+        const sFlowers = gameState.entities.flowers.map(f => f.active ? 1 : 0);
+
         return JSON.stringify({
           t: 's',
           p: sPlayers,
@@ -4689,7 +4705,8 @@
           b: sBombs,
           ba: sBarrels,
           k: gameState.kills,
-          tm: Math.round(gameState.levelTime)
+          tm: Math.round(gameState.levelTime),
+          fl: sFlowers
         });
       }
 
@@ -4807,6 +4824,13 @@
             if (brs[i].active && !isActive) createSharedExplosion(brs[i].mesh.position.clone(), 40);
             brs[i].active = isActive;
             brs[i].mesh.visible = isActive;
+          }
+        }
+
+        if (msg.fl && gameState.entities && gameState.entities.flowers) {
+          const fls = gameState.entities.flowers;
+          for (let i = 0; i < Math.min(msg.fl.length, fls.length); i++) {
+            if (!msg.fl[i] && fls[i].active) { fls[i].active = false; fls[i].mesh.visible = false; }
           }
         }
 
@@ -6455,6 +6479,13 @@
           camera.position.set(cameraDynX, 400, cameraDynZ);
           camera.lookAt(cameraDynX, 0, cameraDynZ);
           if (now - _lastHudUpdate > 250) { _lastHudUpdate = now; updateHUD(); if (isMP()) updateMpHud(); }
+          if (gameState.entities && gameState.entities.flowers) {
+            gameState.entities.flowers.forEach(f => {
+              if (!f.active || !f.mesh) return;
+              f.mesh.position.y = f.startY + Math.sin(time * 2.5 + f.timeOfs) * 1.2;
+              f.mesh.rotation.y += dt * 0.6;
+            });
+          }
           renderer.render(scene, camera);
           return;
         }
