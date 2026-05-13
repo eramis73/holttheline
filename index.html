@@ -4646,7 +4646,9 @@
         for (let i = 0; i < zs.length; i++) {
           const z = zs[i];
           if (!z.active) continue;
-          // [id, x, z, rot, hp, shocked, falling, team]
+          // [id, x, z, rot, hp, shocked, falling, team, dropCode]
+          // dropCode: 0=none, 1=bomb, 2=wire, 3=shield
+          const _dc = z.dropType === 'bomb' ? 1 : z.dropType === 'wire' ? 2 : z.dropType === 'shield' ? 3 : 0;
           sZombies.push([
             z._netId,
             Math.round(z.group.position.x * 10) / 10,
@@ -4655,7 +4657,8 @@
             z.hp,
             z.shocked ? 1 : 0,
             z.isFalling ? 1 : 0,
-            z.teamIdx
+            z.teamIdx,
+            _dc
           ]);
         }
 
@@ -4803,6 +4806,14 @@
               z.isFalling = !!zd[6];
               z.teamIdx = zd[7];
               if (z._teamCapMesh) { z._teamCapMesh.visible = false; }
+              // Sync drop indicator
+              const _dropNames = [null, 'bomb', 'wire', 'shield'];
+              const _newDrop = _dropNames[zd[8] || 0];
+              if (z._dropMeshes && z.dropType !== _newDrop) {
+                z.dropType = _newDrop;
+                Object.values(z._dropMeshes).forEach(m => { m.visible = false; });
+                if (_newDrop && z._dropMeshes[_newDrop]) z._dropMeshes[_newDrop].visible = true;
+              }
             }
           }
           guestZombieMap.forEach((z, id) => {
@@ -6415,13 +6426,36 @@
             }
           }
 
-          // Zombie lerp
+          // Zombie lerp + walk animation
           guestZombieMap.forEach(z => {
             if (!z.active || !z.group) return;
             if (z._tX !== undefined) {
               const zdx = z._tX - z.group.position.x, zdz = z._tZ - z.group.position.z, zDist = Math.hypot(zdx, zdz);
-              if (zDist > 25) { z.group.position.set(z._tX, 0, z._tZ); }
-              else { z.group.position.x += zdx * 0.22; z.group.position.z += zdz * 0.22; z.group.rotation.y += (z._tR - z.group.rotation.y) * 0.22; }
+              let movedDist = 0;
+              if (zDist > 25) {
+                z.group.position.set(z._tX, 0, z._tZ);
+                movedDist = zDist;
+              } else {
+                const px = z.group.position.x, pz = z.group.position.z;
+                z.group.position.x += zdx * 0.22; z.group.position.z += zdz * 0.22;
+                z.group.rotation.y += (z._tR - z.group.rotation.y) * 0.22;
+                movedDist = Math.hypot(z.group.position.x - px, z.group.position.z - pz);
+              }
+              if (!z.isFalling && !z.shocked && zDist > 0.5) {
+                z._walkCycle = (z._walkCycle || 0) + movedDist * 0.55;
+                const wc = z._walkCycle;
+                if (z.lLeg) z.lLeg.rotation.x = Math.sin(wc) * 0.8;
+                if (z.rLeg) z.rLeg.rotation.x = -Math.sin(wc) * 0.8;
+                const lKnee = z.lLeg && z.lLeg.children[1];
+                const rKnee = z.rLeg && z.rLeg.children[1];
+                if (lKnee) lKnee.rotation.x = Math.max(0, -Math.sin(wc)) * 0.6;
+                if (rKnee) rKnee.rotation.x = Math.max(0, Math.sin(wc)) * 0.6;
+                if (z.lArm) z.lArm.rotation.x = Math.sin(wc) * 0.6;
+                if (z.rArm) z.rArm.rotation.x = -Math.sin(wc) * 0.6;
+                z.group.position.y = Math.abs(Math.sin(wc)) * 1.2;
+              } else {
+                z.group.position.y = 0;
+              }
             }
           });
 
