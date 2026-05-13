@@ -5663,10 +5663,14 @@
       let _audCtx = null, _musicSrc = null, _musicGainNode = null, _sfxGainNode = null;
       let _reverbNode = null, _reverbGain = null;
       let _musicOn = true, _sfxOn = true;
+      let _audioUnlocked = false;
 
       function _initAudio() {
         if (_audCtx) {
-          if (_audCtx.state === 'suspended') _audCtx.resume();
+          // Always try to resume — iOS suspends context between gestures
+          if (_audCtx.state === 'suspended') _audCtx.resume().then(() => {
+            if (_musicOn && !_musicSrc) _startMusic();
+          });
           return;
         }
         try {
@@ -5686,12 +5690,23 @@
           _reverbNode = _audCtx.createConvolver(); _reverbNode.buffer = ir;
           _reverbGain = _audCtx.createGain(); _reverbGain.gain.value = 0.22;
           _reverbNode.connect(_reverbGain); _reverbGain.connect(_audCtx.destination);
-          if (_musicOn) _startMusic();
-
-          // Final resume for mobile
-          if (_audCtx.state === 'suspended') _audCtx.resume();
+          // Resume then start music (needed for iOS which starts context suspended)
+          _audCtx.resume().then(() => { if (_musicOn) _startMusic(); });
         } catch (e) { console.error("Audio init failed", e); }
       }
+
+      // Unlock audio on first touch/click — mobile browsers require a user gesture
+      function _unlockAudio() {
+        if (_audioUnlocked) return;
+        _audioUnlocked = true;
+        _initAudio();
+        document.removeEventListener('touchstart', _unlockAudio, true);
+        document.removeEventListener('touchend', _unlockAudio, true);
+        document.removeEventListener('click', _unlockAudio, true);
+      }
+      document.addEventListener('touchstart', _unlockAudio, true);
+      document.addEventListener('touchend', _unlockAudio, true);
+      document.addEventListener('click', _unlockAudio, true);
 
       function _buildMusicBuffer() {
         // Dark cinematic action score — Dm key, BPM 138, builds over 8 bars
@@ -5915,6 +5930,7 @@
 
       function playSfx(type) {
         if (!_audCtx || !_sfxOn) return;
+        if (_audCtx.state === 'suspended') { _audCtx.resume(); return; }
         const SR = _audCtx.sampleRate, now = _audCtx.currentTime;
 
         function osc(freq, t, dur, amp, wave, freqEnd) {
