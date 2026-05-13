@@ -4255,15 +4255,28 @@
       const btnFire = document.getElementById('btn-fire');
       const btnDash = document.getElementById('btn-dash');
       const MAX_R = 48;
+      const LOCK_THRESHOLD = MAX_R * 0.92; // 92% of edge = "snap lock" zone
       let jTouchId = null, jCX = 0, jCY = 0;
+      let _jAtEdge = false, _jLocked = false, _jLockedKx = 0, _jLockedKy = 0;
 
-      const JOY_DEADZONE = 7; // px — within this radius counts as "center"
+      const JOY_DEADZONE = 7;
 
       function joystickReset() {
         jTouchId = null;
-        // Button stays at last position; player keeps running that direction.
-        // touch.vx / touch.vz preserved — not reset.
+        if (_jAtEdge) {
+          // Was at edge → lock direction, knob stays at edge
+          _jLocked = true;
+          jKnob.style.transform = `translate(calc(-50% + ${_jLockedKx}px), calc(-50% + ${_jLockedKy}px))`;
+          // touch.vx / touch.vz kept as-is
+        } else {
+          // Not at edge → stop, center knob, clear lock
+          _jLocked = false;
+          touch.vx = 0; touch.vz = 0;
+          jKnob.style.transform = 'translate(-50%,-50%)';
+        }
+        _jAtEdge = false;
       }
+
       // Knob starts centered
       jKnob.style.cssText += '; left:50%; top:50%; transform:translate(-50%,-50%);';
 
@@ -4272,6 +4285,10 @@
         if (jTouchId !== null) return;
         const t = e.changedTouches[0];
         jTouchId = t.identifier;
+        // Clear any previous lock on new touch
+        _jLocked = false; _jAtEdge = false;
+        touch.vx = 0; touch.vz = 0;
+        jKnob.style.transform = 'translate(-50%,-50%)';
         const r = jBase.getBoundingClientRect();
         jCX = r.left + r.width / 2; jCY = r.top + r.height / 2;
       }, { passive: false });
@@ -4283,8 +4300,8 @@
           const dx = t.clientX - jCX, dy = t.clientY - jCY;
           const rawDist = Math.hypot(dx, dy);
           if (rawDist < JOY_DEADZONE) {
-            // Center zone — stop and center the knob
             touch.vx = 0; touch.vz = 0;
+            _jAtEdge = false;
             jKnob.style.transform = 'translate(-50%,-50%)';
           } else {
             const dist = Math.min(rawDist, MAX_R);
@@ -4292,6 +4309,9 @@
             const kx = Math.cos(ang) * dist, ky = Math.sin(ang) * dist;
             jKnob.style.transform = `translate(calc(-50% + ${kx}px), calc(-50% + ${ky}px))`;
             touch.vx = kx / MAX_R; touch.vz = ky / MAX_R;
+            // Track whether we're in snap-lock zone
+            _jAtEdge = rawDist >= LOCK_THRESHOLD;
+            if (_jAtEdge) { _jLockedKx = kx; _jLockedKy = ky; }
           }
         }
       }, { passive: false });
@@ -6284,7 +6304,7 @@
 
         // ── ONLINE GUEST: early return — render received state only ──────────
         if (gameMode === 'online-guest') {
-          if (now - _lastInputSend >= 50) _sendGuestInput();
+          if (now - _lastInputSend >= 16) _sendGuestInput();
           if (_guestLastState) { applyGuestState(_guestLastState); _guestLastState = null; }
 
           // P1 (host's player): lerp toward host-reported position
@@ -6292,7 +6312,7 @@
           if (_hp && _hp.group && _hp._targetX !== undefined) {
             const _dx = _hp._targetX - _hp.x, _dz = _hp._targetZ - _hp.z, _d = Math.hypot(_dx, _dz);
             if (_d > 30) { _hp.x = _hp._targetX; _hp.z = _hp._targetZ; }
-            else { _hp.x += _dx * 0.35; _hp.z += _dz * 0.35; }
+            else { _hp.x += _dx * 0.6; _hp.z += _dz * 0.6; }
             _hp.group.position.set(_hp.x, _hp.group.position.y, _hp.z);
             _hp._gMoving = _d > 0.4;
           }
@@ -6441,7 +6461,7 @@
 
         // ── ONLINE HOST: send state via WebRTC (fallback: WebSocket) ──────────
         if (gameMode === 'online-host' && gameState.active) {
-          if (now - _lastStateSend >= 50) {
+          if (now - _lastStateSend >= 16) {
             _lastStateSend = now;
             const _s = _serializeState();
             if (!_rtcSend(_s) && onlineWs && onlineWs.readyState === WebSocket.OPEN) onlineWs.send(_s);
