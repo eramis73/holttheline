@@ -5522,8 +5522,7 @@
         if (gameMode === 'multi') {
           // Multiplayer: two players, zombies split equally
           if (lvl === 1) { players[0].score = 0; players[1].score = 0; players[0].lives = 3; players[1].lives = 3; }
-          if (gameState._carryWire) { players[0].wireMeter = (players[0].wireMeter ?? 0) + gameConfig.player.wireLimit; players[1].wireMeter = (players[1].wireMeter ?? 0) + gameConfig.player.wireLimit; }
-          else { players[0].wireMeter = gameConfig.player.wireLimit; players[1].wireMeter = gameConfig.player.wireLimit; }
+          players[0].wireMeter = gameConfig.player.wireLimit; players[1].wireMeter = gameConfig.player.wireLimit;
           gameState._carryWire = false;
           gameState.dropBudget = { bomb: gameConfig.zombieDrops.bombCount, shield: gameConfig.zombieDrops.shieldCount, wire: gameConfig.zombieDrops.wireCount };
           resetPlayer(players[0]); resetPlayer(players[1]);
@@ -5543,8 +5542,7 @@
         } else if (gameMode === 'online-host') {
           // Online host: P1 local, P2 controlled by remote inputs
           if (lvl === 1) { players[0].score = 0; players[1].score = 0; players[0].lives = 3; players[1].lives = 3; }
-          if (gameState._carryWire) { players[0].wireMeter = (players[0].wireMeter ?? 0) + gameConfig.player.wireLimit; players[1].wireMeter = (players[1].wireMeter ?? 0) + gameConfig.player.wireLimit; }
-          else { players[0].wireMeter = gameConfig.player.wireLimit; players[1].wireMeter = gameConfig.player.wireLimit; }
+          players[0].wireMeter = gameConfig.player.wireLimit; players[1].wireMeter = gameConfig.player.wireLimit;
           gameState._carryWire = false;
           gameState.dropBudget = { bomb: gameConfig.zombieDrops.bombCount, shield: gameConfig.zombieDrops.shieldCount, wire: gameConfig.zombieDrops.wireCount };
           resetPlayer(players[0]); resetPlayer(players[1]);
@@ -5578,8 +5576,7 @@
           _guestLastState = null;
         } else {
           if (lvl === 1) { players[0].score = 0; }
-          if (gameState._carryWire) { players[0].wireMeter = (players[0].wireMeter ?? 0) + gameConfig.player.wireLimit; }
-          else { players[0].wireMeter = gameConfig.player.wireLimit; }
+          players[0].wireMeter = gameConfig.player.wireLimit;
           gameState._carryWire = false;
           gameState.dropBudget = { bomb: gameConfig.zombieDrops.bombCount, shield: gameConfig.zombieDrops.shieldCount, wire: gameConfig.zombieDrops.wireCount };
           const savedBombs = players[0].bombs || 0;
@@ -7469,7 +7466,7 @@
                 players.forEach(p2 => { p2.isDrawingWire = false; p2.wirePoints = []; p2.wireMesh.geometry.setFromPoints([]); p2.startMarker.visible = false; });
                 showFloatingText(new THREE.Vector3(cp.x, 18, cp.z), "🩷 RESCUED! LEVEL COMPLETE!", "#ff80ab");
                 vibe([100, 60, 100, 60, 300]);
-                setTimeout(() => { if (gameState.active && gameState.level < 30) { gameState._carryWire = true; startGame(gameState.level + 1); } }, 2500);
+                setTimeout(() => { if (gameState.active && gameState.level < 30) { startGame(gameState.level + 1); } }, 2500);
               }
             });
           }
