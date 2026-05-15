@@ -1695,9 +1695,19 @@
         active: false, level: 1, transitioning: false, zombiesAwake: true, spawnTimer: 0, kills: 0,
         _wasFrozen: false, slowMoTimer: 0, _mpNextLevel: false,
         lakes: [],
-        entities: { zombies: [], trees: [], flowers: [], barrels: [], powerups: [], patrollers: [] },
+        entities: { zombies: [], trees: [], flowers: [], barrels: [], powerups: [], patrollers: [], powerupBoxes: [], diamonds: [] },
+        boxSpawnTimes: [],
+        lightningSpawnTimes: [],
+        diamondSpawnTimes: [],
+        levelTime: 0,
         paused: false
       };
+
+      // Helper to ensure powerupBoxes exists
+      function _ensurePowerupBoxes() {
+        if (!gameState.entities) gameState.entities = {};
+        if (!gameState.entities.powerupBoxes) gameState.entities.powerupBoxes = [];
+      }
 
       function segsIntersect(a, b, c, d) {
         const dx1 = b.x - a.x, dz1 = b.z - a.z, dx2 = d.x - c.x, dz2 = d.z - c.z;
@@ -2460,16 +2470,7 @@
       }
 
       function assignDropType() {
-        const budget = gameState.dropBudget;
-        if (!budget) return null;
-        const options = [];
-        if (budget.bomb > 0) options.push('bomb');
-        if (budget.shield > 0) options.push('shield');
-        if (budget.wire > 0) options.push('wire');
-        if (options.length === 0 || Math.random() > 0.28) return null;
-        const type = options[Math.floor(Math.random() * options.length)];
-        budget[type]--;
-        return type;
+        return null; // Power-ups are now in glass boxes on the field, not on zombies
       }
 
       function createDropIndicators(zGroup) {
@@ -2537,6 +2538,120 @@
         shieldGroup.position.y = 24; shieldGroup.visible = false; zGroup.add(shieldGroup);
 
         return { bomb: bombGroup, wire: wireGroup, shield: shieldGroup };
+      }
+
+      function createPowerupBox(type) {
+        const group = new THREE.Group();
+        
+        // Bluish Glass Material (Premium)
+        const boxMat = new THREE.MeshPhysicalMaterial({
+          color: 0x00b0ff, metalness: 0.1, roughness: 0.05,
+          transmission: 0.95, thickness: 1.5, transparent: true, opacity: 0.45,
+          side: THREE.DoubleSide
+        });
+        
+        const size = 18.72;
+        const box = new THREE.Mesh(new THREE.BoxGeometry(size, size, size), boxMat);
+        box.position.y = size/2;
+        box.castShadow = true;
+        group.add(box);
+
+        // Yellow Frame Joints (Bars along edges)
+        const frameMat = new THREE.MeshStandardMaterial({ color: 0xffeb3b, emissive: 0xffeb3b, emissiveIntensity: 0.5 });
+        const barThick = 1.0; // thicker bars for bigger box
+        const barLen = size + barThick;
+
+        for(let i=0; i<12; i++) {
+          const bar = new THREE.Mesh(new THREE.BoxGeometry(barThick, barThick, barLen), frameMat);
+          if (i < 4) { // Vertical
+            bar.rotation.x = Math.PI/2;
+            bar.position.set((i%2?1:-1)*(size/2), size/2, (i<2?1:-1)*(size/2));
+          } else if (i < 8) { // Horizontal X
+            bar.rotation.y = Math.PI/2;
+            bar.position.set(0, (i%2?1:-1)*(size/2) + size/2, (i<6?1:-1)*(size/2));
+          } else { // Horizontal Z
+            bar.position.set((i%2?1:-1)*(size/2), (i<10?size:0), 0);
+          }
+          group.add(bar);
+        }
+
+        // Add Icon inside (floating slightly above)
+        let icon = new THREE.Group();
+        let lightCol = 0xffffff;
+
+        if (type === 'bomb') {
+          lightCol = 0xff3300;
+          const bBody = new THREE.Mesh(new THREE.SphereGeometry(6.5, 16, 16), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2 }));
+          icon.add(bBody);
+          const fuse = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 3.5, 6), new THREE.MeshStandardMaterial({ color: 0x6b4c1e }));
+          fuse.position.set(2.0, 5.5, 0); fuse.rotation.z = -0.5;
+          icon.add(fuse);
+          const spark = new THREE.Mesh(new THREE.SphereGeometry(1.4, 8, 8), new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 2 }));
+          spark.position.set(3.5, 7.5, 0);
+          icon.add(spark);
+        } else if (type === 'shield') {
+          lightCol = 0x0088ff;
+          // Rotated to be parallel to ground (y-axis is now the depth)
+          const sBody = new THREE.Mesh(new THREE.BoxGeometry(9, 1.5, 10), new THREE.MeshStandardMaterial({ color: 0x1565c0, metalness: 0.8 }));
+          icon.add(sBody);
+          const cross = new THREE.Mesh(new THREE.BoxGeometry(2, 0.5, 7), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.5 }));
+          cross.position.y = 0.8; icon.add(cross);
+          const crossH = new THREE.Mesh(new THREE.BoxGeometry(6, 0.5, 2), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.5 }));
+          crossH.position.y = 0.8; crossH.position.z = 0.5; icon.add(crossH);
+        } else if (type === 'speed') {
+          lightCol = 0xffcc00;
+          const bolt = new THREE.Group();
+          const part1 = new THREE.Mesh(new THREE.BoxGeometry(2, 7, 2), new THREE.MeshStandardMaterial({ color: 0xffcc00, emissive: 0xffcc00, emissiveIntensity: 1.0 }));
+          part1.rotation.z = 0.5; part1.position.set(2.5, 3, 0); bolt.add(part1);
+          const part2 = new THREE.Mesh(new THREE.BoxGeometry(2, 7, 2), new THREE.MeshStandardMaterial({ color: 0xffcc00, emissive: 0xffcc00, emissiveIntensity: 1.0 }));
+          part2.rotation.z = 0.5; part2.position.set(-2.5, -3, 0); bolt.add(part2);
+          icon.add(bolt);
+        } else if (type === 'freeze') {
+          lightCol = 0x00ffff;
+          for(let i=0; i<3; i++) {
+            const bar = new THREE.Mesh(new THREE.BoxGeometry(1.5, 12, 1.5), new THREE.MeshStandardMaterial({ color: 0x80d8ff, emissive: 0x80d8ff, emissiveIntensity: 1.0 }));
+            bar.rotation.z = (i/3) * Math.PI;
+            icon.add(bar);
+            const bar2 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 12, 1.5), new THREE.MeshStandardMaterial({ color: 0x80d8ff, emissive: 0x80d8ff, emissiveIntensity: 1.0 }));
+            bar2.rotation.x = (i/3) * Math.PI;
+            icon.add(bar2);
+          }
+        } else if (type === 'slowDown') {
+          lightCol = 0xaaaaaa;
+          const ring = new THREE.Mesh(new THREE.TorusGeometry(6, 2, 8, 16), new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.5 }));
+          ring.rotation.x = Math.PI/2;
+          icon.add(ring);
+          const core = new THREE.Mesh(new THREE.SphereGeometry(2.5, 8, 8), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.5 }));
+          icon.add(core);
+        } else if (type === 'zombieCall') {
+          lightCol = 0xff0000;
+          const skull = new THREE.Mesh(new THREE.SphereGeometry(4, 10, 10), new THREE.MeshStandardMaterial({ color: 0xeeeeee }));
+          icon.add(skull);
+          const jaw = new THREE.Mesh(new THREE.BoxGeometry(4, 2, 3), new THREE.MeshStandardMaterial({ color: 0xdddddd }));
+          jaw.position.y = -3; icon.add(jaw);
+        } else if (type === 'lightning') {
+          lightCol = 0xffffff;
+          const boltMat = new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0xffff00, emissiveIntensity: 2.5 });
+          const p1 = new THREE.Mesh(new THREE.BoxGeometry(3, 9, 3), boltMat);
+          p1.rotation.z = 0.5; p1.position.set(3, 3.5, 0); icon.add(p1);
+          const p2 = new THREE.Mesh(new THREE.BoxGeometry(3, 9, 3), boltMat);
+          p2.rotation.z = 0.5; p2.position.set(-3, -3.5, 0); icon.add(p2);
+          const mid = new THREE.Mesh(new THREE.BoxGeometry(5, 3, 3), boltMat);
+          mid.position.set(0, 0, 0); icon.add(mid);
+        }
+
+        icon.position.y = size / 2;
+        group.add(icon);
+
+        const frameColor = type === 'lightning' ? 0x00e5ff : 0xffeb3b;
+        group.traverse(c => { if(c.isMesh && c.geometry.type === 'BoxGeometry' && c.geometry.parameters.width === 1.0) c.material.color.set(frameColor); });
+
+        // Add a glowing light inside the glass
+        const pLight = new THREE.PointLight(lightCol, 50, 60);
+        pLight.position.y = size / 2;
+        group.add(pLight);
+
+        return { group, icon, type, pLight };
       }
 
       function spawnZombieAt(zx, zz, baseSpeed) {
@@ -2845,15 +2960,6 @@
       }
 
       // Effect pool unlocked by level
-      function getMysteryPool(levelIndex) {
-        const all = ['speed', 'shield', 'bomb', 'freeze', 'slowDown', 'zombieCall', 'trapCancel', 'bombPickup'];
-        if (levelIndex <= 2) return ['speed', 'shield', 'bombPickup'];
-        if (levelIndex === 3) return all.slice(0, 4).concat(['bombPickup']);
-        if (levelIndex === 4) return all.slice(0, 5).concat(['bombPickup']);
-        if (levelIndex === 5) return all.slice(0, 6).concat(['bombPickup']);
-        return all;
-      }
-
       function _buildDiamondMesh(scale) {
         const g = new THREE.Group();
         const top = new THREE.Mesh(geoCache.dTop, matCache.diamond);
@@ -2866,6 +2972,25 @@
         g.add(bot);
         g.scale.setScalar(scale);
         return g;
+      }
+
+      function spawnLevelDiamond() {
+        let rx, rz, ok = false, att = 0;
+        while (!ok && att < 80) {
+          att++;
+          rx = (Math.random() - 0.5) * ARENA_LIMIT_X * 1.4;
+          rz = (Math.random() - 0.5) * ARENA_LIMIT * 1.4;
+          if (Math.hypot(rx, rz) < 40) continue;
+          let blocked = false;
+          if (gameState.lakes) gameState.lakes.forEach(lk => { if (Math.hypot(rx - lk.x, rz - lk.z) < lk.r + 12) blocked = true; });
+          gameState.entities.trees.forEach(t => { if (Math.hypot(rx - t.x, rz - t.z) < t.radius + 10) blocked = true; });
+          if (!blocked) ok = true;
+        }
+        if (!ok) return;
+        const g = _buildDiamondMesh(1.75);
+        g.position.set(rx, 14, rz);
+        worldGroup.add(g);
+        gameState.entities.diamonds.push({ group: g, active: true, x: rx, z: rz, effect: null });
       }
 
       function spawnBombPhaseDiamond(forceX, forceZ) {
@@ -2882,64 +3007,14 @@
             players.forEach(p => { if (p.alive && Math.hypot(p.x - rx, p.z - rz) < 35) blocked = true; });
             if (!blocked) ok = true;
           }
-          if (gameMode === 'online-host') {
-            const _flMsg = JSON.stringify({ t: 'fl_add', x: Math.round(rx), z: Math.round(rz) });
-            if (!_rtcSend(_flMsg) && onlineWs && onlineWs.readyState === WebSocket.OPEN) onlineWs.send(_flMsg);
-          }
         }
-        const g = _buildDiamondMesh(2.4);
-        g.position.set(rx, 8, rz);
-        worldGroup.add(g);
-        gameState.entities.flowers.push({
-          mesh: g, active: true, startY: 6, timeOfs: Math.random() * 10,
-          isDiamond: true, effect: 'bombPickup', isBombPhaseDiamond: true
-        });
-        showFloatingText(new THREE.Vector3(rx, 20, rz), '💎 +BOMB!', '#ffee44');
-      }
-
-      function spawnMysteryDiamonds(levelIndex) {
-        const pool = getMysteryPool(levelIndex);
-        // Shuffle pool, take first 3
-        const shuffled = pool.slice().sort(() => Math.random() - 0.5);
-        const chosen = shuffled.slice(0, 3);
-        const arenaBounds = ARENA_LIMIT * 0.75;
-
-        chosen.forEach(effect => {
-          let rx, rz, ok = false, att = 0;
-          while (!ok && att < 200) {
-            att++;
-            rx = (Math.random() - 0.5) * ARENA_LIMIT_X * 1.6;
-            rz = (Math.random() - 0.5) * arenaBounds * 1.8;
-            if (Math.hypot(rx, rz) < 35) continue;
-            let blocked = false;
-            gameState.lakes.forEach(lk => { if (Math.hypot(rx - lk.x, rz - lk.z) < lk.r + 8) blocked = true; });
-            gameState.entities.trees.forEach(t => { if (Math.hypot(rx - t.x, rz - t.z) < t.radius + 6) blocked = true; });
-            if (!blocked) ok = true;
-          }
-
-          // Faceted diamond — 6-zone multi-material for realistic look
-          const g = new THREE.Group();
-
-          const top = new THREE.Mesh(geoCache.dTop, matCache.diamond);
-          top.position.y = 0; top.castShadow = true;
-          const topEdges = new THREE.LineSegments(new THREE.EdgesGeometry(geoCache.dTop), matCache.dLine);
-          top.add(topEdges);
-          g.add(top);
-
-          const bot = new THREE.Mesh(geoCache.dBot, matCache.diamond);
-          bot.rotation.x = Math.PI; bot.position.y = -4; bot.castShadow = true;
-          const botEdges = new THREE.LineSegments(new THREE.EdgesGeometry(geoCache.dBot), matCache.dLine);
-          bot.add(botEdges);
-          g.add(bot);
-          g.scale.setScalar(2.0);
-          g.position.set(rx, 8, rz);
-          worldGroup.add(g);
-
-          gameState.entities.flowers.push({
-            mesh: g, active: true, startY: 6, timeOfs: Math.random() * 10,
-            isDiamond: true, effect
-          });
-        });
+        const _diamondPool = ['speed', 'freeze', 'slowDown', 'zombieCall'];
+        const _dType = _diamondPool[Math.floor(Math.random() * _diamondPool.length)];
+        const pBox = createPowerupBox(_dType);
+        pBox.group.position.set(rx, 0, rz);
+        worldGroup.add(pBox.group);
+        gameState.entities.powerupBoxes.push({ ...pBox, active: true, x: rx, z: rz });
+        showFloatingText(new THREE.Vector3(rx, 20, rz), '💎 ELMAS!', '#ff69b4');
       }
 
       function applyMysteryEffect(effect, p, pos) {
@@ -2994,6 +3069,10 @@
             showFloatingText(pos, '☠️ ZOMBIE INCOMING!', '#e53935');
             break;
           }
+          case 'lightning':
+            p.wireMeter = (p.wireMeter || 0) + 300;
+            showFloatingText(pos, '⚡ +300m TEL!', '#ffff00');
+            break;
           case 'trapCancel':
             p.isDrawingWire = false; p.wirePoints = [];
             p.wireMesh.geometry.dispose(); p.wireMesh.geometry = new THREE.BufferGeometry();
@@ -3475,9 +3554,6 @@
           gameState.entities.trees.push({ x: x, z: z, radius: (_baseR[biome.tree] || 10) * scale, group: tGroup });
         }
 
-        // MYSTERY DIAMOND — 3 per level, unknown effect
-        spawnMysteryDiamonds(levelIndex);
-
         gameState.entities.barrels = [];
         const _rawBarrel = LEVELS[levelIndex - 1].barrelCount || 0;
         const barrelTarget = (isMP() && gameState._mpDiffBarrelCount != null)
@@ -3493,6 +3569,25 @@
           worldGroup.add(bMesh); gameState.entities.barrels.push({ mesh: bMesh, active: true });
           barrelPlaced++;
         }
+
+        // --- POWERUP GLASS BOXES ---
+        gameState.entities.powerupBoxes = [];
+        gameState.entities.diamonds = [];
+        gameState.levelTime = 0;
+        gameState.boxSpawnTimes = [];
+        gameState.lightningSpawnTimes = [];
+        gameState.diamondSpawnTimes = [];
+        for (let i = 0; i < 2; i++) {
+          gameState.boxSpawnTimes.push(Math.random() * 90);
+        }
+        gameState.lightningSpawnTimes.push(Math.random() * 90);
+        for (let i = 0; i < 3; i++) {
+          gameState.diamondSpawnTimes.push(Math.random() * 90);
+        }
+        gameState.boxSpawnTimes.sort((a, b) => a - b);
+        gameState.lightningSpawnTimes.sort((a, b) => a - b);
+        gameState.diamondSpawnTimes.sort((a, b) => a - b);
+
 
         gameState.entities.powerups = [];
 
@@ -7604,19 +7699,89 @@
 
 
 
-          // MYSTERY DIAMONDS
-          gameState.entities.flowers.forEach(f => {
-            if (!f.active) return;
-            f.mesh.position.y = f.startY + Math.sin(time * 2.5 + f.timeOfs) * 1.2;
-            f.mesh.rotation.y += 0.6 * dt;
+          // --- Powerup Glass Box Update, Spawn & Pickup ---
+          _ensurePowerupBoxes();
+          if (gameState.active && !gameState.transitioning) {
+            gameState.levelTime += dt;
+            
+            // Function to handle the actual spawning
+            const _spawnBox = (type) => {
+              let rx, rz, ok = false, att = 0;
+              const arenaBounds = ARENA_LIMIT * 0.75;
+              while (!ok && att < 50) {
+                att++;
+                rx = (Math.random() - 0.5) * ARENA_LIMIT_X * 1.4;
+                rz = (Math.random() - 0.5) * arenaBounds * 1.4;
+                if (Math.hypot(rx, rz) < 50) continue;
+                let blocked = false;
+                gameState.entities.trees.forEach(t => { if (Math.hypot(rx - t.x, rz - t.z) < t.radius + 15) blocked = true; });
+                gameState.lakes.forEach(l => { if (Math.hypot(rx - l.x, rz - l.z) < l.r + 15) blocked = true; });
+                if (!blocked) ok = true;
+              }
+              if (ok) {
+                const pBox = createPowerupBox(type);
+                pBox.group.position.set(rx, 0, rz);
+                worldGroup.add(pBox.group);
+                gameState.entities.powerupBoxes.push({ ...pBox, active: true, x: rx, z: rz });
+              }
+            };
+
+            // Spawn Bomb Box
+            if (gameState.boxSpawnTimes.length > 0 && gameState.levelTime >= gameState.boxSpawnTimes[0]) {
+              gameState.boxSpawnTimes.shift();
+              _spawnBox('bomb');
+            }
+            // Spawn Lightning Box
+            if (gameState.lightningSpawnTimes.length > 0 && gameState.levelTime >= gameState.lightningSpawnTimes[0]) {
+              gameState.lightningSpawnTimes.shift();
+              _spawnBox('lightning');
+            }
+            // Spawn Diamond
+            if (gameState.diamondSpawnTimes.length > 0 && gameState.levelTime >= gameState.diamondSpawnTimes[0]) {
+              gameState.diamondSpawnTimes.shift();
+              spawnLevelDiamond();
+            }
+          }
+
+          gameState.entities.powerupBoxes.forEach(pb => {
+            if (!pb.active) return;
+            // Animation: slow rotation
+            pb.group.rotation.y += dt * 0.8;
+            if (pb.icon) pb.icon.position.y = 18.72 / 2 + Math.sin(time * 3 + pb.x) * 1.5;
+
             players.forEach(p => {
-              if (!p.alive || !f.active) return;
-              if (Math.hypot(p.x - f.mesh.position.x, p.z - f.mesh.position.z) < 18.0) {
-                f.active = false; f.mesh.visible = false;
-                applyMysteryEffect(f.effect, p, f.mesh.position.clone());
+              if (!p.alive || !pb.active) return;
+              const dist = Math.hypot(p.x - pb.x, p.z - pb.z);
+              if (dist < 28.0) { // Increased pickup radius for easier collection
+                pb.active = false;
+                worldGroup.remove(pb.group);
+                applyMysteryEffect(pb.type, p, pb.group.position.clone());
+                playSfx('pickup');
+                createSmokePuff(pb.group.position);
               }
             });
           });
+
+          // Level diamonds: animate + collect
+          if (gameState.entities.diamonds) {
+            const _dPool = ['speed', 'freeze', 'slowDown', 'zombieCall'];
+            gameState.entities.diamonds.forEach(d => {
+              if (!d.active) return;
+              d.group.rotation.y += dt * 1.2;
+              d.group.position.y = 14 + Math.sin(time * 2.5 + d.x) * 3;
+              players.forEach(p => {
+                if (!p.alive || !d.active) return;
+                if (Math.hypot(p.x - d.x, p.z - d.z) < 24) {
+                  d.active = false;
+                  worldGroup.remove(d.group);
+                  const eff = _dPool[Math.floor(Math.random() * _dPool.length)];
+                  applyMysteryEffect(eff, p, d.group.position.clone());
+                  playSfx('pickup');
+                  createSmokePuff(d.group.position);
+                }
+              });
+            });
+          }
 
           // MP BOMB PHASE: spawn bonus diamonds after 40s stalemate, then every 20s
           if (isMP() && gameState.levelComplete && players.some(p => p.inBombPhase) && !gameState.transitioning) {
