@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -1477,7 +1477,7 @@
           dashSpeed: 322,
           dashDuration: 0.20,
           dashCooldown: 1.5,
-          bodyRadius: 10,
+          bodyRadius: 7,
           kickStrength: 25,
           barrelKickStrength: 5,
           wireLimit: 500,
@@ -1498,7 +1498,7 @@
           kickMaxStrength: 500,
         },
         barrels: {
-          collisionRadius: 16,
+          collisionRadius: 20,
           kickMaxStrength: 40,
           blastRange: 60,
           blastHalfWidth: 5,
@@ -2014,6 +2014,7 @@
         fuseBase.position.set(1.5, 13.5, 0); fuseBase.rotation.z = -0.35; g.add(fuseBase);
         const spark = new THREE.Mesh(geoCache.bombSparkGeo, matCache.bombSparkMat);
         spark.position.set(3.2, 16.2, 0); g.add(spark);
+        g.scale.setScalar(1.25);
         return g;
       }
 
@@ -2565,131 +2566,213 @@
         }
         if (gameState.entities.zombies.length > 700) return;
 
-        // Randomly select outfit and skin color
-        const rSkin = zSkinMats[Math.floor(Math.random() * zSkinMats.length)];
-        const rShirt = zShirtMats[Math.floor(Math.random() * zShirtMats.length)];
-        const rPants = zPantsMats[Math.floor(Math.random() * zPantsMats.length)];
-
         const zGroup = new THREE.Group();
         const rBone = Math.random() < 0.5 ? boneMat : boneOldMat;
 
-        // Skull — large round
-        const skull = new THREE.Mesh(new THREE.SphereGeometry(5.5, 14, 12), rBone);
-        skull.scale.set(1, 0.9, 1); skull.position.y = 12.5; skull.castShadow = true; zGroup.add(skull);
-        addOutline(skull, 1.14);
+        // ── SKULL ─────────────────────────────────────────────────────────────
+        const skull = new THREE.Mesh(new THREE.SphereGeometry(6.6, 16, 14), rBone);
+        skull.scale.set(1.0, 0.92, 1.0); skull.position.y = 12.5; skull.castShadow = true; zGroup.add(skull);
+        addOutline(skull, 1.12);
+
         // Team color halo (only visible in MP mode)
         const capMat = new THREE.MeshStandardMaterial({ color: mpCapColor || 0x1565c0, emissive: mpCapColor || 0x1565c0, emissiveIntensity: 2.0, roughness: 0.3, transparent: true, opacity: 0.92 });
         const capMesh = new THREE.Mesh(new THREE.TorusGeometry(3.65, 1.5, 8, 28), capMat);
         capMesh.rotation.x = -Math.PI / 2;
-        capMesh.position.y = 15; capMesh.userData.isTeamCap = true;
+        capMesh.position.y = 17; capMesh.userData.isTeamCap = true;
         capMesh.visible = false; zGroup.add(capMesh);
-        // Jaw — inside Group so pivot rotates from top
-        const jawGrp = new THREE.Group();
-        jawGrp.position.set(0, 9.4, 1.5); zGroup.add(jawGrp);
-        const jaw = new THREE.Mesh(new THREE.BoxGeometry(6, 1.8, 3.5), rBone);
-        jaw.position.y = -0.9; jawGrp.add(jaw);
-        addOutline(jaw, 1.2);
-        // Teeth — rotate with jaw
-        [-2, 0, 2].forEach(tx => {
-          const tooth = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.0, 1.0), rBone);
-          tooth.position.set(tx, -1.8, 1.0); jawGrp.add(tooth);
-          addOutline(tooth, 1.25);
-        });
 
-        // Black mats for initial state
+        // Black mats for sockets / mouth
         const socketMat = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.9 });
-        const mouthMat = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.9 });
+        const mouthMat  = new THREE.MeshStandardMaterial({ color: 0x1a0000, roughness: 0.95 });
 
-        // Mouth glow inside jaw (initially black)
-        const mouthGlow = new THREE.Mesh(new THREE.BoxGeometry(4.5, 1.2, 2.2), mouthMat);
+        // Jaw group — pivot at mouth line so it animates open/close
+        const jawGrp = new THREE.Group();
+        jawGrp.position.set(0, 10.2, 1.5); zGroup.add(jawGrp);
+        const jaw = new THREE.Mesh(new THREE.BoxGeometry(7.2, 2.0, 3.8), rBone);
+        jaw.position.y = -0.9; jawGrp.add(jaw);
+        addOutline(jaw, 1.18);
+
+        // Mouth dark interior
+        const mouthGlow = new THREE.Mesh(new THREE.BoxGeometry(5.2, 1.3, 2.4), mouthMat);
         mouthGlow.position.set(0, -0.6, 0.8); jawGrp.add(mouthGlow);
 
-        // Eye sockets — initially black
+        // Lower teeth (move with jaw)
+        [-2.1, 0, 2.1].forEach(tx => {
+          const tooth = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.2, 1.1), rBone);
+          tooth.position.set(tx, -2.1, 1.1); jawGrp.add(tooth);
+          addOutline(tooth, 1.22);
+        });
+        // Upper teeth (fixed to skull)
+        [-2.1, 0, 2.1].forEach(tx => {
+          const tooth = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.2, 1.1), rBone);
+          tooth.position.set(tx, 9.6, 6.2); zGroup.add(tooth);
+          addOutline(tooth, 1.22);
+        });
+
+        // Eye sockets — deep oval cavities + glowing pupils (initially black)
         const eyeMeshes = [];
-        [-2.2, 2.2].forEach(ox => {
-          const socket = new THREE.Mesh(new THREE.SphereGeometry(1.9, 10, 10), socketMat);
-          socket.position.set(ox, 13.0, 4.5); zGroup.add(socket);
-          eyeMeshes.push(socket);
+        [-2.7, 2.7].forEach(ox => {
+          const sock = new THREE.Mesh(new THREE.SphereGeometry(2.2, 10, 8), socketMat);
+          sock.scale.set(1.0, 0.88, 0.6); sock.position.set(ox, 13.4, 5.4); zGroup.add(sock);
+          eyeMeshes.push(sock);
+          const pupil = new THREE.Mesh(new THREE.SphereGeometry(1.1, 8, 6), socketMat.clone());
+          pupil.position.set(ox, 13.4, 6.0); zGroup.add(pupil);
+          eyeMeshes.push(pupil);
         });
         // Nose socket
-        const nose = new THREE.Mesh(new THREE.SphereGeometry(0.8, 8, 8), socketMat);
-        nose.position.set(0, 11.5, 5.3); zGroup.add(nose);
+        const nose = new THREE.Mesh(new THREE.SphereGeometry(0.9, 8, 6), socketMat);
+        nose.scale.set(1, 1.1, 0.5); nose.position.set(0, 11.8, 6.1); zGroup.add(nose);
         eyeMeshes.push(nose);
 
-        // Omurga
-        [9.5, 8.0, 6.5].forEach(y => {
-          const vert = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 1.2, 6), rBone);
-          vert.position.set(0, y, 0); zGroup.add(vert);
-          addOutline(vert, 1.28);
+        // Neck
+        const neck = new THREE.Mesh(new THREE.CylinderGeometry(1.08, 1.08, 2.4, 9), rBone);
+        neck.position.y = 10.0; zGroup.add(neck);
+        addOutline(neck, 1.06);
+
+        // Chest (torso ellipsoid)
+        const chest = new THREE.Mesh(new THREE.SphereGeometry(4.32, 18, 14), rBone);
+        chest.scale.set(1.0, 1.42, 0.76); chest.position.y = 7.5; chest.castShadow = true; zGroup.add(chest);
+        addOutline(chest, 1.04);
+
+        // Ribcage — 5 torus arcs opening forward
+        for (let i = 0; i < 5; i++) {
+          const ribR = 3.18 - i * 0.26;
+          const rib = new THREE.Mesh(new THREE.TorusGeometry(ribR, 0.30, 7, 22, Math.PI), rBone);
+          rib.castShadow = true;
+          rib.rotation.set(Math.PI / 2, 0, Math.PI);
+          rib.position.set(0, 8.9 - i * 1.62, 0); zGroup.add(rib);
+        }
+        // Sternum
+        const ster = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.34, 6.96, 9), rBone);
+        ster.position.set(0, 6.8, 2.88); zGroup.add(ster);
+
+        // Belly
+        const belly = new THREE.Mesh(new THREE.SphereGeometry(2.16, 12, 10), rBone);
+        belly.scale.set(0.88, 0.82, 0.7); belly.position.y = 4.6; zGroup.add(belly);
+        addOutline(belly, 1.06);
+
+        // Pelvis
+        const pelvis = new THREE.Mesh(new THREE.SphereGeometry(3.36, 14, 12), rBone);
+        pelvis.scale.set(1.2, 0.58, 0.74); pelvis.position.y = 3.4; zGroup.add(pelvis);
+        addOutline(pelvis, 1.05);
+
+        // Spine discs
+        [7.2, 5.6, 4.2, 3.0].forEach(y => {
+          const disc = new THREE.Mesh(new THREE.SphereGeometry(0.66, 8, 6), rBone);
+          disc.position.set(0, y, 0); zGroup.add(disc);
         });
-        // Kaburga kemikleri
+
+        // Shoulder knobs
+        [-5.5, 5.5].forEach(x => {
+          const sh = new THREE.Mesh(new THREE.SphereGeometry(1.44, 12, 10), rBone);
+          addOutline(sh, 1.06); sh.position.set(x, 9.0, 0); zGroup.add(sh);
+        });
+
+        // Clavicles
         [-1, 1].forEach(s => {
-          [8.8, 7.2].forEach(y => {
-            const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 4.5, 5), rBone);
-            rib.position.set(s * 2.5, y, 0);
-            rib.rotation.z = s * 0.55; zGroup.add(rib);
-            addOutline(rib, 1.4);
-          });
+          const cl = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 4.32, 9), rBone);
+          cl.rotation.z = s * (Math.PI / 2 - 0.28);
+          cl.position.set(s * 3.48, 9.2, 0); zGroup.add(cl);
         });
 
-        // Arms — extending forward from shoulder (top-down view)
-        const lArmGrp = new THREE.Group(); lArmGrp.position.set(-4.5, 10.0, 0); zGroup.add(lArmGrp);
-        const lArmMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.5, 7, 6), rBone);
-        lArmMesh.rotation.x = Math.PI / 2; lArmMesh.position.z = 3.5;
-        lArmMesh.castShadow = true; lArmGrp.add(lArmMesh);
-        addOutline(lArmMesh, 1.3);
-        const lHandMesh = new THREE.Mesh(new THREE.SphereGeometry(1.2, 7, 7), rBone);
-        lHandMesh.position.z = 7.2; lArmGrp.add(lHandMesh);
-        addOutline(lHandMesh, 1.28);
+        // ── ARMS ──────────────────────────────────────────────────────────────
+        function makeArm(sx) {
+          const armGrp = new THREE.Group();
+          armGrp.position.set(sx, 9.0, 0);
+          zGroup.add(armGrp);
 
-        const rArmGrp = new THREE.Group(); rArmGrp.position.set(4.5, 10.0, 0); zGroup.add(rArmGrp);
-        const rArmMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.5, 7, 6), rBone);
-        rArmMesh.rotation.x = Math.PI / 2; rArmMesh.position.z = 3.5;
-        rArmMesh.castShadow = true; rArmGrp.add(rArmMesh);
-        addOutline(rArmMesh, 1.3);
-        const rHandMesh = new THREE.Mesh(new THREE.SphereGeometry(1.2, 7, 7), rBone);
-        rHandMesh.position.z = 7.2; rArmGrp.add(rHandMesh);
-        addOutline(rHandMesh, 1.28);
+          // Upper arm
+          const upArm = new THREE.Mesh(new THREE.CylinderGeometry(0.82, 0.70, 6.0, 10), rBone);
+          upArm.position.y = -3.2; upArm.castShadow = true; armGrp.add(upArm);
+          addOutline(upArm, 1.055);
 
-        const lArm = lArmGrp;
-        const rArm = rArmGrp;
+          // Elbow ball
+          const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.94, 10, 8), rBone);
+          elbow.position.y = -6.5; armGrp.add(elbow);
+          addOutline(elbow, 1.06);
 
-        // Legs — hip → thigh → knee → shin → foot
+          // Forearm group (pivots at elbow)
+          const foreGrp = new THREE.Group(); foreGrp.position.y = -6.5; armGrp.add(foreGrp);
+          const foreArm = new THREE.Mesh(new THREE.CylinderGeometry(0.70, 0.58, 5.28, 10), rBone);
+          foreArm.position.y = -2.64; foreArm.castShadow = true; foreGrp.add(foreArm);
+          addOutline(foreArm, 1.055);
+
+          // Wrist
+          const wrist = new THREE.Mesh(new THREE.SphereGeometry(0.78, 10, 8), rBone);
+          wrist.position.y = -5.76; foreGrp.add(wrist);
+          addOutline(wrist, 1.06);
+
+          // Hand
+          const hand = new THREE.Mesh(new THREE.SphereGeometry(1.08, 10, 8), rBone);
+          hand.scale.set(1, 0.78, 0.72); hand.position.y = -7.2; foreGrp.add(hand);
+          addOutline(hand, 1.06);
+
+          // Finger stubs
+          [-0.43, 0, 0.43].forEach(fx => {
+            const fing = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.17, 1.32, 7), rBone);
+            fing.position.set(fx, -8.5, 0.12); foreGrp.add(fing);
+          });
+
+          // Đarm kısaltma: kol uzunluğunu %80'e indir (enini korur)
+          armGrp.scale.set(1, 0.8, 1);
+          return armGrp;
+        }
+
+        const lArm = makeArm(-5.5);
+        const rArm = makeArm(5.5);
+
+        // ── LEGS ──────────────────────────────────────────────────────────────
         function makeLeg(sx) {
           const hipGrp = new THREE.Group();
-          hipGrp.position.set(sx, 7.0, 0);
+          hipGrp.position.set(sx, 4.8, 0);
           zGroup.add(hipGrp);
 
-          // Uyluk
-          const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.65, 4.5, 6), rBone);
-          thigh.position.y = -2.25; hipGrp.add(thigh);
-          addOutline(thigh, 1.28);
+          // Hip ball
+          const hipBall = new THREE.Mesh(new THREE.SphereGeometry(1.32, 10, 8), rBone);
+          hipGrp.add(hipBall); addOutline(hipBall, 1.06);
 
-          // Diz eklemi
-          const kneeGrp = new THREE.Group();
-          kneeGrp.position.y = -4.5;
-          hipGrp.add(kneeGrp);
+          // Femur (thigh)
+          const femur = new THREE.Mesh(new THREE.CylinderGeometry(1.14, 0.96, 6.0, 10), rBone);
+          femur.position.y = -3.24; hipGrp.add(femur); addOutline(femur, 1.052);
 
-          const kneeBall = new THREE.Mesh(new THREE.SphereGeometry(0.9, 7, 7), rBone);
-          kneeGrp.add(kneeBall);
-          addOutline(kneeBall, 1.3);
+          // Knee ball
+          const knee = new THREE.Mesh(new THREE.SphereGeometry(1.38, 12, 10), rBone);
+          knee.position.y = -6.6; hipGrp.add(knee); addOutline(knee, 1.06);
 
-          // Shin — from knee to foot, slightly angled forward
-          const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.45, 4.5, 6), rBone);
-          shin.position.y = -2.25; shin.rotation.x = 0.15;
-          kneeGrp.add(shin);
-          addOutline(shin, 1.35);
+          // Lower leg (pivot at knee)
+          const kneeGrp = new THREE.Group(); kneeGrp.position.y = -6.6; hipGrp.add(kneeGrp);
 
-          // Ayak
-          const foot = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.9, 3.2), rBone);
-          foot.position.set(0, -4.7, 1.2); kneeGrp.add(foot);
-          addOutline(foot, 1.2);
+          // Tibia
+          const tibia = new THREE.Mesh(new THREE.CylinderGeometry(1.02, 0.82, 5.76, 10), rBone);
+          tibia.position.y = -3.12; kneeGrp.add(tibia); addOutline(tibia, 1.052);
+
+          // Ankle
+          const ankle = new THREE.Mesh(new THREE.SphereGeometry(1.1, 10, 8), rBone);
+          ankle.position.y = -6.24; kneeGrp.add(ankle); addOutline(ankle, 1.06);
+
+          // Foot
+          const footGrp = new THREE.Group(); footGrp.position.y = -6.24; kneeGrp.add(footGrp);
+
+          // Heel
+          const heel = new THREE.Mesh(new THREE.SphereGeometry(1.14, 9, 7), rBone);
+          heel.scale.set(0.88, 0.52, 0.95); heel.position.set(0, 0, -0.72); footGrp.add(heel);
+
+          // Mid foot
+          const midFoot = new THREE.Mesh(new THREE.SphereGeometry(1.2, 10, 8), rBone);
+          midFoot.scale.set(0.85, 0.44, 1.4); midFoot.position.set(0, 0, 1.08); footGrp.add(midFoot);
+
+          // 3 toe stubs
+          [-0.5, 0, 0.5].forEach((tx, i) => {
+            const toeL = [1.0, 1.1, 1.0][i];
+            const toe = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.16, toeL, 7), rBone);
+            toe.rotation.x = Math.PI / 2; toe.position.set(tx, 0, 3.2 + toeL / 2); footGrp.add(toe);
+          });
 
           return hipGrp;
         }
 
-        const lLeg = makeLeg(-2.3);
-        const rLeg = makeLeg(2.3);
+        const lLeg = makeLeg(-2.76);
+        const rLeg = makeLeg(2.76);
 
         zGroup.scale.setScalar(scale);
         zGroup.position.set(zx, 0, zz); worldGroup.add(zGroup);
@@ -3388,7 +3471,7 @@
 
           // Visual bounding radius per object type (local-space, unscaled)
           // pine cone root r=8; cactus arm ~9.74 units; rock 2nd stone (6,4,0)+r8=14
-          const _baseR = { pine: 7, cactus: 9, rock: 13, balls: 9, crystal: 7, neon: 3, grave: 5, labPillar: 5 };
+          const _baseR = { pine: 5.5, cactus: 7, rock: 10, balls: 7, crystal: 5.5, neon: 2.5, grave: 4, labPillar: 4 };
           gameState.entities.trees.push({ x: x, z: z, radius: (_baseR[biome.tree] || 10) * scale, group: tGroup });
         }
 
@@ -3955,7 +4038,7 @@
         p.group.add(p._shieldMesh);
         p._shieldOutline = null;
 
-        p.group.scale.setScalar(1.75);
+        p.group.scale.setScalar(2.10);
         p.group.traverse(c => {
           if (c.isMesh && c !== p._shieldMesh) {
             c.material = c.material.clone();
@@ -4007,7 +4090,7 @@
         p.alive = true; p.group.visible = true;
         p.sinking = false; p.sinkTimer = 0;
         p.group.rotation.set(0, 0, 0);
-        p.group.scale.setScalar(1.75);
+        p.group.scale.setScalar(2.10);
         p.x = 0;
         p.z = 0;
         p.group.position.set(p.x, 0, p.z);
@@ -6627,15 +6710,31 @@
               if (zDist > 0.5) {
                 z._walkCycle = (z._walkCycle || 0) + movedDist * 0.55;
                 const wc = z._walkCycle;
-                if (z.lLeg) z.lLeg.rotation.x = Math.sin(wc) * 0.8;
-                if (z.rLeg) z.rLeg.rotation.x = -Math.sin(wc) * 0.8;
-                const lKnee = z.lLeg && z.lLeg.children[1];
-                const rKnee = z.rLeg && z.rLeg.children[1];
-                if (lKnee) lKnee.rotation.x = Math.max(0, -Math.sin(wc)) * 0.6;
-                if (rKnee) rKnee.rotation.x = Math.max(0, Math.sin(wc)) * 0.6;
-                if (z.lArm) z.lArm.rotation.x = Math.sin(wc) * 0.6;
-                if (z.rArm) z.rArm.rotation.x = -Math.sin(wc) * 0.6;
-                z.group.position.y = Math.abs(Math.sin(wc)) * 1.2;
+                const _gLegAnim = (phase) => {
+                  const s = Math.sin(phase);
+                  const hipAngle = s * 0.72;
+                  const swingT = Math.max(0, s);
+                  const kneeAngle = swingT * swingT * 1.1;
+                  const tibiaComp = -swingT * 0.55;
+                  return { hipAngle, kneeAngle, tibiaComp };
+                };
+                const gLA = _gLegAnim(wc);
+                const gRA = _gLegAnim(wc + Math.PI);
+                if (z.lLeg) z.lLeg.rotation.x = gLA.hipAngle;
+                if (z.rLeg) z.rLeg.rotation.x = gRA.hipAngle;
+                const lKnee = z.lLeg && z.lLeg.children[3];
+                const rKnee = z.rLeg && z.rLeg.children[3];
+                if (lKnee) lKnee.rotation.x = gLA.kneeAngle + gLA.tibiaComp;
+                if (rKnee) rKnee.rotation.x = gRA.kneeAngle + gRA.tibiaComp;
+                const ARM_SWING_G = 0.50;
+                if (z.lArm) z.lArm.rotation.x = -Math.PI / 2 + Math.sin(wc) * ARM_SWING_G;
+                if (z.rArm) z.rArm.rotation.x = -Math.PI / 2 - Math.sin(wc) * ARM_SWING_G;
+                // Dirsek kırılması
+                const lForeG = z.lArm && z.lArm.children[2];
+                const rForeG = z.rArm && z.rArm.children[2];
+                if (lForeG) lForeG.rotation.x = 0.65 + Math.sin(wc) * 0.22;
+                if (rForeG) rForeG.rotation.x = 0.65 - Math.sin(wc) * 0.22;
+                z.group.position.y = Math.max(0, Math.cos(wc * 2)) * 0.9;
               } else {
                 z.group.position.y = 0;
               }
@@ -8131,19 +8230,45 @@
               z.group.rotation.y = Math.atan2(z.dirX, z.dirZ);
               const zDist = z.speed * dt;
               z._walkCycle = (z._walkCycle || 0) + zDist * 0.55;
-              // Leg stepping — forward/backward from hip
-              z.lLeg.rotation.x = Math.sin(z._walkCycle) * 0.8;
-              z.rLeg.rotation.x = -Math.sin(z._walkCycle) * 0.8;
-              // Knee bend — knee bends inward each step
-              const lKnee = z.lLeg.children[1]; // kneeGrp
-              const rKnee = z.rLeg.children[1];
-              if (lKnee) lKnee.rotation.x = Math.max(0, -Math.sin(z._walkCycle)) * 0.6;
-              if (rKnee) rKnee.rotation.x = Math.max(0, Math.sin(z._walkCycle)) * 0.6;
-              // Left arm ↔ right leg, right arm ↔ left leg
-              z.lArm.rotation.x = Math.sin(z._walkCycle) * 0.6;
-              z.rArm.rotation.x = -Math.sin(z._walkCycle) * 0.6;
-              // Body bounce
-              z.group.position.y = Math.abs(Math.sin(z._walkCycle)) * 1.2;
+              // ── Proper bipedal walk ──────────────────────────────────────
+              // Each leg is offset by half-cycle (PI). For each phase value:
+              //   swing phase (sin > 0): hip forward, knee lifts, tibia swings back
+              //   stance phase (sin ≤ 0): hip pushes back, knee nearly straight
+              const _legAnim = (phase) => {
+                const s = Math.sin(phase);
+                // Hip: full forward-back swing
+                const hipAngle = s * 0.72;
+                // Knee: bends ONLY during swing (foot off ground), zero during stance
+                const swingT = Math.max(0, s);           // 0..1 during swing
+                const kneeAngle = swingT * swingT * 1.1; // quadratic for snappy lift
+                // Tibia compensation: keep lower leg more vertical during swing
+                // so the foot doesn't drag behind the knee
+                const tibiaComp = -swingT * 0.55;
+                return { hipAngle, kneeAngle, tibiaComp };
+              };
+              const wc = z._walkCycle;
+              const lAnim = _legAnim(wc);
+              const rAnim = _legAnim(wc + Math.PI);
+              z.lLeg.rotation.x = lAnim.hipAngle;
+              z.rLeg.rotation.x = rAnim.hipAngle;
+              const lKnee = z.lLeg.children[3]; // kneeGrp (lower leg pivot)
+              const rKnee = z.rLeg.children[3];
+              if (lKnee) lKnee.rotation.x = lAnim.kneeAngle + lAnim.tibiaComp;
+              if (rKnee) rKnee.rotation.x = rAnim.kneeAngle + rAnim.tibiaComp;
+              // Arms: yatay taban (-PI/2) + çapraz salınım
+              // Sağ bacak öne → sol kol geriye, sol bacak öne → sağ kol geriye
+              const ARM_SWING = 0.50;
+              z.lArm.rotation.x = -Math.PI / 2 + Math.sin(wc) * ARM_SWING;
+              z.rArm.rotation.x = -Math.PI / 2 - Math.sin(wc) * ARM_SWING;
+              // Dirsek kırılması — foreGrp = armGrp.children[2]
+              const lFore = z.lArm.children[2];
+              const rFore = z.rArm.children[2];
+              const ELBOW_BASE = 0.65;  // daima hafif kırık
+              const ELBOW_SWING = 0.22; // kol geriye gidince biraz daha büküyor
+              if (lFore) lFore.rotation.x = ELBOW_BASE + Math.sin(wc) * ELBOW_SWING;
+              if (rFore) rFore.rotation.x = ELBOW_BASE - Math.sin(wc) * ELBOW_SWING;
+              // Body bob: rises at mid-stance (between steps), low at heel-strike
+              z.group.position.y = Math.max(0, Math.cos(wc * 2)) * 0.9;
 
               // Jaw animation — mouth opens visibly as zombie approaches player
               if (z.jawGrp) {
