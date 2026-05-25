@@ -1233,9 +1233,9 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
               if (Math.random() > 0.90) continue;
               const t = ((i + 0.5) / n - 0.5) * specLen * 0.96;
               mkSpec(
-                specAxis === 'z' ? cx + t : cx,
+                specAxis === 'x' ? cx + t : cx,
                 cy + h / 2,
-                specAxis === 'x' ? cz + t : cz
+                specAxis === 'z' ? cz + t : cz
               );
             }
           };
