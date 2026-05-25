@@ -228,7 +228,7 @@ function _buildZombieGroup(typeIdx, mpCapColor) {
   neckGroup.position.y = 0.35 * S;
   torso.add(neckGroup);
 
-  const cranium = new THREE.Mesh(new THREE.SphereGeometry(0.32*S, 24, 16), rBone);
+  const cranium = new THREE.Mesh(new THREE.SphereGeometry(0.4*S, 24, 16), rBone);
   cranium.position.y = 0.2*S; cranium.castShadow = true;
   neckGroup.add(cranium); addOutline(cranium, 1.08);
 
@@ -288,53 +288,53 @@ function _buildZombieGroup(typeIdx, mpCapColor) {
   const armLGroup = new THREE.Group();
   armLGroup.position.set(-0.45*S, 0.15*S, 0); torso.add(armLGroup);
 
-  const upperArmL = new THREE.Mesh(new THREE.CapsuleGeometry(0.1*S, 0.25*S, 4, 8), clothMat);
+  const upperArmL = new THREE.Mesh(new THREE.CapsuleGeometry(0.12*S, 0.1875*S, 4, 8), clothMat);
   upperArmL.position.y = -0.15*S; upperArmL.castShadow = true; armLGroup.add(upperArmL);
 
-  const elbowL = new THREE.Group(); elbowL.position.y = -0.4*S; armLGroup.add(elbowL);
-  const lowerArmL = new THREE.Mesh(new THREE.CapsuleGeometry(0.04*S, 0.3*S, 4, 8), rBone);
+  const elbowL = new THREE.Group(); elbowL.position.y = -0.36*S; armLGroup.add(elbowL);
+  const lowerArmL = new THREE.Mesh(new THREE.CapsuleGeometry(0.048*S, 0.225*S, 4, 8), rBone);
   lowerArmL.position.y = -0.15*S; lowerArmL.castShadow = true; elbowL.add(lowerArmL);
   const handL = new THREE.Mesh(new THREE.BoxGeometry(0.12*S, 0.05*S, 0.08*S), rBone);
-  handL.position.y = -0.4*S; handL.castShadow = true; elbowL.add(handL);
+  handL.position.y = -0.32*S; handL.castShadow = true; elbowL.add(handL);
 
   // ── Right Arm ──
   const armRGroup = new THREE.Group();
   armRGroup.position.set(0.45*S, 0.15*S, 0); torso.add(armRGroup);
 
-  const upperArmR = new THREE.Mesh(new THREE.CapsuleGeometry(0.1*S, 0.25*S, 4, 8), clothMat);
+  const upperArmR = new THREE.Mesh(new THREE.CapsuleGeometry(0.12*S, 0.1875*S, 4, 8), clothMat);
   upperArmR.position.y = -0.15*S; upperArmR.castShadow = true; armRGroup.add(upperArmR);
 
-  const elbowR = new THREE.Group(); elbowR.position.y = -0.4*S; armRGroup.add(elbowR);
-  const lowerArmR = new THREE.Mesh(new THREE.CapsuleGeometry(0.04*S, 0.3*S, 4, 8), rBone);
+  const elbowR = new THREE.Group(); elbowR.position.y = -0.36*S; armRGroup.add(elbowR);
+  const lowerArmR = new THREE.Mesh(new THREE.CapsuleGeometry(0.048*S, 0.225*S, 4, 8), rBone);
   lowerArmR.position.y = -0.15*S; lowerArmR.castShadow = true; elbowR.add(lowerArmR);
   const handR = new THREE.Mesh(new THREE.BoxGeometry(0.12*S, 0.05*S, 0.08*S), rBone);
-  handR.position.y = -0.4*S; handR.castShadow = true; elbowR.add(handR);
+  handR.position.y = -0.32*S; handR.castShadow = true; elbowR.add(handR);
 
   // ── Left Leg ──
   const legLGroup = new THREE.Group();
   legLGroup.position.set(-0.2*S, 0.9*S, 0); zGroup.add(legLGroup);
 
-  const thighL = new THREE.Mesh(new THREE.CapsuleGeometry(0.12*S, 0.35*S, 4, 8), darkMat);
+  const thighL = new THREE.Mesh(new THREE.CapsuleGeometry(0.144*S, 0.2625*S, 4, 8), darkMat);
   thighL.position.y = -0.15*S; thighL.castShadow = true; legLGroup.add(thighL);
 
-  const kneeL = new THREE.Group(); kneeL.position.y = -0.4*S; legLGroup.add(kneeL);
-  const shinL = new THREE.Mesh(new THREE.CapsuleGeometry(0.1*S, 0.35*S, 4, 8), clothMat);
+  const kneeL = new THREE.Group(); kneeL.position.y = -0.38*S; legLGroup.add(kneeL);
+  const shinL = new THREE.Mesh(new THREE.CapsuleGeometry(0.12*S, 0.2625*S, 4, 8), clothMat);
   shinL.position.y = -0.15*S; shinL.castShadow = true; kneeL.add(shinL);
   const shoeL = new THREE.Mesh(new THREE.BoxGeometry(0.18*S, 0.15*S, 0.25*S), darkMat);
-  shoeL.position.set(0, -0.4*S, 0.05*S); shoeL.castShadow = true; kneeL.add(shoeL);
+  shoeL.position.set(0, -0.36*S, 0.05*S); shoeL.castShadow = true; kneeL.add(shoeL);
 
   // ── Right Leg ──
   const legRGroup = new THREE.Group();
   legRGroup.position.set(0.2*S, 0.9*S, 0); zGroup.add(legRGroup);
 
-  const thighR = new THREE.Mesh(new THREE.CapsuleGeometry(0.12*S, 0.35*S, 4, 8), darkMat);
+  const thighR = new THREE.Mesh(new THREE.CapsuleGeometry(0.144*S, 0.2625*S, 4, 8), darkMat);
   thighR.position.y = -0.15*S; thighR.castShadow = true; legRGroup.add(thighR);
 
-  const kneeR = new THREE.Group(); kneeR.position.y = -0.4*S; legRGroup.add(kneeR);
-  const shinR = new THREE.Mesh(new THREE.CapsuleGeometry(0.06*S, 0.35*S, 4, 8), rBone);
+  const kneeR = new THREE.Group(); kneeR.position.y = -0.38*S; legRGroup.add(kneeR);
+  const shinR = new THREE.Mesh(new THREE.CapsuleGeometry(0.072*S, 0.2625*S, 4, 8), rBone);
   shinR.position.y = -0.15*S; shinR.castShadow = true; kneeR.add(shinR);
   const shoeR = new THREE.Mesh(new THREE.BoxGeometry(0.18*S, 0.15*S, 0.25*S), darkMat);
-  shoeR.position.set(0, -0.4*S, 0.05*S); shoeR.castShadow = true; kneeR.add(shoeR);
+  shoeR.position.set(0, -0.36*S, 0.05*S); shoeR.castShadow = true; kneeR.add(shoeR);
 
   return { zGroup, lArm: armLGroup, rArm: armRGroup, lLeg: legLGroup, rLeg: legRGroup, jawGrp, eyeMeshes, mouthMesh: mouthGlow, capMesh };
 }
