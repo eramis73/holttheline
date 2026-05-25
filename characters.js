@@ -199,7 +199,8 @@ function _buildZombieGroup(typeIdx, mpCapColor) {
   const clothMat = new THREE.MeshStandardMaterial({ color: cfg.clothColor, roughness: 1.0 });
   const darkMat  = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 });
   const socketMat = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.9 });
-  const mouthMat  = new THREE.MeshStandardMaterial({ color: 0x1a0000, roughness: 0.95 });
+  const eyeIrisMat = new THREE.MeshStandardMaterial({ color: 0xcc0000, emissive: 0xaa0000, emissiveIntensity: 2.5, roughness: 0.2 });
+  const mouthMat  = new THREE.MeshStandardMaterial({ color: 0xcc0000, emissive: 0x880000, emissiveIntensity: 1.5, roughness: 0.7 });
 
   const zGroup = new THREE.Group();
 
@@ -240,8 +241,8 @@ function _buildZombieGroup(typeIdx, mpCapColor) {
   const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.32*S, 0.2*S, 0.35*S), rBone);
   jaw.castShadow = true; jawGrp.add(jaw); addOutline(jaw, 1.1);
 
-  const mouthGlow = new THREE.Mesh(new THREE.BoxGeometry(0.2*S, 0.05*S, 0.1*S), mouthMat);
-  mouthGlow.position.set(0, -0.04*S, 0.08*S); jawGrp.add(mouthGlow);
+  const mouthGlow = new THREE.Mesh(new THREE.BoxGeometry(0.22*S, 0.07*S, 0.1*S), mouthMat);
+  mouthGlow.position.set(0, -0.04*S, 0.1*S); jawGrp.add(mouthGlow);
 
   for (let i = -2; i <= 2; i++) {
     const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.03*S, 0.08*S, 0.03*S), rBone);
@@ -251,10 +252,12 @@ function _buildZombieGroup(typeIdx, mpCapColor) {
   // Eyes
   const eyeMeshes = [];
   [-0.13*S, 0.13*S].forEach(ox => {
-    const sock = new THREE.Mesh(new THREE.SphereGeometry(0.08*S, 10, 8), socketMat);
+    const sock = new THREE.Mesh(new THREE.SphereGeometry(0.09*S, 10, 8), socketMat);
     sock.position.set(ox, 0.2*S, 0.25*S); neckGroup.add(sock); eyeMeshes.push(sock);
-    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.035*S, 8, 6), socketMat.clone());
-    pupil.position.set(ox, 0.2*S, 0.3*S); neckGroup.add(pupil); eyeMeshes.push(pupil);
+    const iris = new THREE.Mesh(new THREE.SphereGeometry(0.055*S, 8, 6), eyeIrisMat);
+    iris.position.set(ox, 0.2*S, 0.285*S); neckGroup.add(iris); eyeMeshes.push(iris);
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.025*S, 6, 5), socketMat.clone());
+    pupil.position.set(ox, 0.2*S, 0.315*S); neckGroup.add(pupil); eyeMeshes.push(pupil);
   });
   const nose = new THREE.Mesh(new THREE.ConeGeometry(0.05*S, 0.12*S, 3), socketMat);
   nose.rotation.x = Math.PI / 2; nose.position.set(0, 0.1*S, 0.32*S);
