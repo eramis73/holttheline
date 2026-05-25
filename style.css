@@ -8,6 +8,10 @@
       font-family: 'Press Start 2P', monospace;
     }
 
+    button, a, [role="button"] {
+      touch-action: manipulation;
+    }
+
     body {
       overflow: hidden;
       background: #000;

@@ -28,11 +28,9 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
       document.head.appendChild(link);
     })();
 
-    // Pinch-zoom and double-tap zoom prevention (PWA/iOS)
+    // Pinch-zoom prevention (PWA/iOS)
     document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
     document.addEventListener('touchstart', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
-    let _lastTap = 0;
-    document.addEventListener('touchend', e => { const now = Date.now(); if (now - _lastTap < 300) e.preventDefault(); _lastTap = now; }, { passive: false });
 
     document.addEventListener('DOMContentLoaded', () => {
       const btn = document.getElementById('btn-fullscreen');
