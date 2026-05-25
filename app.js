@@ -2869,9 +2869,11 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
           if (isMobile) {
             const lp = players[1];
             if (lp && lp.alive && lp.group) {
-              const zoneZStart = ARENA_LIMIT / 3;
-              const factorZ = Math.max(0, Math.min(1, (lp.z - zoneZStart) / (ARENA_LIMIT * 0.67)));
-              cameraDynZ += (factorZ * 95 - cameraDynZ) * Math.min(1, dt * 3.5);
+              const deadZ = ARENA_LIMIT / 3;
+              let targetZ = 0;
+              if (lp.z > deadZ) targetZ = ((lp.z - deadZ) / (ARENA_LIMIT * 0.67)) * 95;
+              else if (lp.z < -deadZ) targetZ = ((lp.z + deadZ) / (ARENA_LIMIT * 0.67)) * 95;
+              cameraDynZ += (targetZ - cameraDynZ) * Math.min(1, dt * 3.5);
               const zone5Start = ARENA_LIMIT_X * 0.6, zone1Start = -ARENA_LIMIT_X * 0.6;
               let targetX = 0;
               if (lp.x > zone5Start) targetX = ((lp.x - zone5Start) / (ARENA_LIMIT_X * 0.4)) * 120;
@@ -4308,9 +4310,10 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
         if (isMobile) {
           const p0 = players[0];
           if (p0 && p0.alive) {
-            const zoneZStart = ARENA_LIMIT / 3;
-            const factorZ = Math.max(0, Math.min(1, (p0.z - zoneZStart) / (ARENA_LIMIT * 0.67)));
-            const targetZ = factorZ * 95;
+            const deadZ = ARENA_LIMIT / 3;
+            let targetZ = 0;
+            if (p0.z > deadZ) targetZ = ((p0.z - deadZ) / (ARENA_LIMIT * 0.67)) * 95;
+            else if (p0.z < -deadZ) targetZ = ((p0.z + deadZ) / (ARENA_LIMIT * 0.67)) * 95;
             cameraDynZ += (targetZ - cameraDynZ) * Math.min(1, dt * 3.5);
 
             const zone5Start = ARENA_LIMIT_X * 0.6;
