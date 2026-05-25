@@ -1190,6 +1190,62 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
           post.castShadow = true; worldGroup.add(post);
         }
 
+        // ── Bleachers ────────────────────────────────────────────────────────
+        {
+          const ROWS = 5;
+          const rowDepth = 18, rowH = 12;
+          const concreteMat = new THREE.MeshStandardMaterial({ color: 0xb0b0a8, roughness: 0.9 });
+          const stepEdgeMat = new THREE.MeshStandardMaterial({ color: 0x787870, roughness: 0.9 });
+          const spectatorColors = [0xef5350, 0x42a5f5, 0xffca28, 0x66bb6a, 0xab47bc, 0xff7043, 0x26c6da];
+
+          const addBleacherSide = (axis, sign, length) => {
+            for (let r = 0; r < ROWS; r++) {
+              const offset = fenceT / 2 + r * rowDepth + rowDepth / 2;
+              const height = (r + 1) * rowH;
+              const bx = axis === 'x' ? sign * (AX + offset) : 0;
+              const bz = axis === 'z' ? sign * (AZ + offset) : 0;
+              const geoW = axis === 'x' ? rowDepth : length;
+              const geoD = axis === 'x' ? length : rowDepth;
+
+              const step = new THREE.Mesh(new THREE.BoxGeometry(geoW, height, geoD), concreteMat);
+              step.position.set(bx, height / 2, bz);
+              step.receiveShadow = true; worldGroup.add(step);
+
+              const edge = new THREE.Mesh(new THREE.BoxGeometry(
+                axis === 'x' ? 1.5 : geoW, 2, axis === 'z' ? 1.5 : geoD
+              ), stepEdgeMat);
+              edge.position.set(bx, height + 1, bz);
+              worldGroup.add(edge);
+
+              // Spectators
+              const count = Math.floor(length / 22);
+              for (let i = 0; i < count; i++) {
+                const t = (i / (count - 1 || 1)) * 0.9 + 0.05;
+                const sx = axis === 'x' ? bx : (t - 0.5) * length;
+                const sz = axis === 'z' ? bz : (t - 0.5) * length;
+                if (Math.random() < 0.75) {
+                  const col = spectatorColors[Math.floor(Math.random() * spectatorColors.length)];
+                  const bodyMat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.8 });
+                  const skinMat = new THREE.MeshStandardMaterial({ color: 0xffccaa, roughness: 0.6 });
+                  const body = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, 9, 8), bodyMat);
+                  body.position.set(sx, height + 6.5, sz);
+                  worldGroup.add(body);
+                  const head = new THREE.Mesh(new THREE.SphereGeometry(4, 8, 6), skinMat);
+                  head.position.set(sx, height + 14, sz);
+                  worldGroup.add(head);
+                }
+              }
+            }
+          };
+
+          const sideLen = AZ * 2 + fenceT;
+          const backLen = AX * 2 + fenceT;
+          addBleacherSide('x', -1, sideLen); // left
+          addBleacherSide('x',  1, sideLen); // right
+          addBleacherSide('z', -1, backLen); // back
+        }
+        // ── End Bleachers ─────────────────────────────────────────────────────
+
         const numLakes = 3;
         let attempts = 0;
 
