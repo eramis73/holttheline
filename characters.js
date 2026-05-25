@@ -253,11 +253,11 @@ function _buildZombieGroup(typeIdx, mpCapColor) {
   const eyeMeshes = [];
   [-0.13*S, 0.13*S].forEach(ox => {
     const sock = new THREE.Mesh(new THREE.SphereGeometry(0.09*S, 10, 8), socketMat);
-    sock.position.set(ox, 0.2*S, 0.25*S); neckGroup.add(sock); eyeMeshes.push(sock);
-    const iris = new THREE.Mesh(new THREE.SphereGeometry(0.055*S, 8, 6), eyeIrisMat);
-    iris.position.set(ox, 0.2*S, 0.285*S); neckGroup.add(iris); eyeMeshes.push(iris);
-    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.025*S, 6, 5), socketMat.clone());
-    pupil.position.set(ox, 0.2*S, 0.315*S); neckGroup.add(pupil); eyeMeshes.push(pupil);
+    sock.position.set(ox, 0.2*S, 0.34*S); neckGroup.add(sock); eyeMeshes.push(sock);
+    const iris = new THREE.Mesh(new THREE.SphereGeometry(0.065*S, 8, 6), eyeIrisMat);
+    iris.position.set(ox, 0.2*S, 0.375*S); neckGroup.add(iris); eyeMeshes.push(iris);
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.028*S, 6, 5), socketMat.clone());
+    pupil.position.set(ox, 0.2*S, 0.405*S); neckGroup.add(pupil); eyeMeshes.push(pupil);
   });
   const nose = new THREE.Mesh(new THREE.ConeGeometry(0.05*S, 0.12*S, 3), socketMat);
   nose.rotation.x = Math.PI / 2; nose.position.set(0, 0.1*S, 0.32*S);
