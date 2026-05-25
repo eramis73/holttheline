@@ -2919,7 +2919,7 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
           guestBombMap.forEach(bm => {
             bm.sparkLight.intensity = 60 + Math.random() * 40;
           });
-          tickBleacherSpectators(clock.getElapsedTime());
+          tickBleacherSpectators(clock.getElapsedTime(), dt);
           renderer.render(scene, camera);
           return;
         }
@@ -4348,7 +4348,7 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
           updateHUD(gameState, players);
           if (isMP()) updateMpHud(gameState, players, gameMode);
         }
-        tickBleacherSpectators(time);
+        tickBleacherSpectators(time, dt);
         renderer.render(scene, camera);
       }
       animate();
