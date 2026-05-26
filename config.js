@@ -33,8 +33,8 @@ export const gameConfig = {
     blastHalfWidth: 5,
   },
   arena: {
-    limitZ: 205,
-    limitX: Math.round(205 * 1.615),
+    limitZ: 226,
+    limitX: 314,
   },
   zombieDrops: {
     bombCount: 2,
