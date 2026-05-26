@@ -18,19 +18,21 @@ let G, M, togaM, skinM, hairM;
 function initRes() {
   if (G) return;
 
+  // Geometriler — orijinal boyut, grp.scale ile 10x büyütülüyor
   G = {
     body:     new THREE.CylinderGeometry(1.5, 2.3, 6, 6),
     head:     new THREE.SphereGeometry(1.8, 8, 6),
     hair:     new THREE.SphereGeometry(1.95, 8, 5, 0, Math.PI * 2, 0, Math.PI * 0.55),
     arm:      new THREE.CapsuleGeometry(0.5, 3.2, 4, 5),
     drape:    new THREE.BoxGeometry(0.5, 5, 2),
-    colBase:  new THREE.CylinderGeometry(1.8, 2.0, 1.2, 8),
-    capital:  new THREE.BoxGeometry(3.8, 1.8, 3.8),
-    brazBowl: new THREE.SphereGeometry(2, 8, 4, 0, Math.PI * 2, 0, Math.PI * 0.5),
-    flame:    new THREE.ConeGeometry(1.3, 4, 6),
-    flameIn:  new THREE.ConeGeometry(0.7, 2.8, 5),
-    banner:   new THREE.PlaneGeometry(6, 16),
-    shield:   new THREE.CircleGeometry(2.5, 8),
+    // Sütun, meşale, bayrak geometrileri 10x — paylaşımlı, değişmez
+    colBase:  new THREE.CylinderGeometry(18, 20, 12, 8),
+    capital:  new THREE.BoxGeometry(38, 18, 38),
+    brazBowl: new THREE.SphereGeometry(20, 8, 4, 0, Math.PI * 2, 0, Math.PI * 0.5),
+    flame:    new THREE.ConeGeometry(13, 40, 6),
+    flameIn:  new THREE.ConeGeometry(7, 28, 5),
+    banner:   new THREE.PlaneGeometry(60, 160),
+    shield:   new THREE.CircleGeometry(25, 8),
   };
 
   M = {
@@ -53,6 +55,7 @@ function initRes() {
   hairM = HAIR_C.map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 }));
 }
 
+// ── Seyirci — grp.scale 10x ile büyütülüyor ──────────────────────────
 const mkSpec = (x, y, z) => {
   const grp = new THREE.Group();
 
@@ -95,7 +98,8 @@ const mkSpec = (x, y, z) => {
   aR.rotation.z = 0.75;
   grp.add(aR);
 
-  grp.scale.setScalar(0.8 + Math.random() * 0.35);
+  // 10x büyütme — geometri orijinal, scale ile büyütülüyor
+  grp.scale.setScalar(8.0 + Math.random() * 3.5);
   grp.position.set(x, y, z);
   grp.rotation.y = Math.atan2(x, z) + (Math.random() - 0.5) * 0.3;
 
@@ -106,7 +110,7 @@ const mkSpec = (x, y, z) => {
     baseY: y,
     phase: Math.random() * Math.PI * 2,
     speed: 0.8 + Math.random() * 2.0,
-    amp:   0.5 + Math.random() * 1.0,
+    amp:   5 + Math.random() * 10,   // 10x ile orantılı
     wx: x, wz: z,
     cheerCd:  3 + Math.random() * 10,
     cheerT:   Math.random() * 10,
@@ -115,49 +119,52 @@ const mkSpec = (x, y, z) => {
   });
 };
 
+// ── Meşale — 10x geometri ─────────────────────────────────────────────
 const mkBrazier = (x, y, z, withLight) => {
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, y, 6), M.iron);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(5, 7, y, 6), M.iron);
   pole.position.set(x, y / 2, z);
   worldGroup.add(pole);
 
   const bowl = new THREE.Mesh(G.brazBowl, M.bronze);
-  bowl.position.set(x, y + 0.5, z);
+  bowl.position.set(x, y + 5, z);
   bowl.rotation.x = Math.PI;
   worldGroup.add(bowl);
 
   const f1 = new THREE.Mesh(G.flame, M.flame.clone());
-  f1.position.set(x, y + 3, z);
+  f1.position.set(x, y + 30, z);
   worldGroup.add(f1);
 
   const f2 = new THREE.Mesh(G.flameIn, M.flameIn.clone());
-  f2.position.set(x, y + 2.8, z);
+  f2.position.set(x, y + 28, z);
   worldGroup.add(f2);
 
   let light = null;
   if (withLight) {
     light = new THREE.PointLight(0xff6622, 1.5, 60, 1.5);
-    light.position.set(x, y + 5, z);
+    light.position.set(x, y + 50, z);
     worldGroup.add(light);
   }
 
-  gameState.braziers.push({ f1, f2, light, baseY: y + 3, phase: Math.random() * 10 });
+  gameState.braziers.push({ f1, f2, light, baseY: y + 30, phase: Math.random() * 10 });
 };
 
+// ── Sütun — 10x shaft yarıçapı, COL_H ile orantılı yükseklik ─────────
 const mkColumn = (x, y, z, h) => {
   const base = new THREE.Mesh(G.colBase, M.marble);
-  base.position.set(x, y + 0.6, z);
+  base.position.set(x, y + 6, z);
   worldGroup.add(base);
 
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.5, h - 3, 8), M.marble);
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(13, 15, h - 3, 8), M.marble);
   shaft.position.set(x, y + h / 2, z);
   shaft.castShadow = true;
   worldGroup.add(shaft);
 
   const cap = new THREE.Mesh(G.capital, M.marble);
-  cap.position.set(x, y + h - 0.9, z);
+  cap.position.set(x, y + h - 9, z);
   worldGroup.add(cap);
 };
 
+// ── Bayrak — 10x geometri ─────────────────────────────────────────────
 const mkBanner = (x, y, z, rotY) => {
   const b = new THREE.Mesh(G.banner, M.red);
   b.position.set(x, y, z);
@@ -167,12 +174,13 @@ const mkBanner = (x, y, z, rotY) => {
   const s = new THREE.Mesh(G.shield, M.gold);
   s.position.set(x, y + 2, z);
   s.rotation.y = rotY;
-  s.translateZ(0.5);
+  s.translateZ(5);
   worldGroup.add(s);
 
   gameState.banners.push({ mesh: b, baseRot: rotY, phase: Math.random() * 10 });
 };
 
+// ── Tribün şeridi ─────────────────────────────────────────────────────
 const mkStrip = (cx, cy, cz, w, h, d, specAxis, specLen, rowIdx, faceSign) => {
   const blockMat = rowIdx < 2 ? M.sandLt : (rowIdx < 4 ? M.sand : M.sandDk);
 
@@ -225,6 +233,7 @@ const mkStrip = (cx, cy, cz, w, h, d, specAxis, specLen, rowIdx, faceSign) => {
     worldGroup.add(row);
   }
 
+  // Seyirciler her 16 birimde bir
   const n = Math.floor(specLen / 16);
   for (let i = 0; i < n; i++) {
     if (Math.random() > 0.92) continue;
@@ -267,28 +276,25 @@ export function buildBleachers(fenceT) {
     worldGroup.add(pc);
   }
 
-  // 5 kademe tribün
+  // 5 kademe tribün — köşeler yan şeritlerle kapatılıyor, ayrı köşe bloğu yok
   for (let r = 0; r < ROWS; r++) {
     const off = fenceT / 2 + POD_T + r * RD + RD / 2;
     const h = (r + 1) * RH + POD_H;
-    const sideLen = AZ * 2 + fenceT;
-    const backLen = AX * 2 + fenceT;
 
-    mkStrip(-(AX + off), h / 2, 0,       RD, h, sideLen, 'z', sideLen, r,  1);
-    mkStrip( (AX + off), h / 2, 0,       RD, h, sideLen, 'z', sideLen, r, -1);
-    mkStrip(0, h / 2, -(AZ + off), backLen, h, RD, 'x', backLen, r,  1);
-    mkStrip(0, h / 2,  (AZ + off), backLen, h, RD, 'x', backLen, r, -1);
+    // Yan şeritler (sol/sağ): köşe alanını da kapsayacak şekilde uzatıldı
+    const sideLen = 2 * (AZ + off + RD / 2);
 
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-      const corner = new THREE.Mesh(new THREE.BoxGeometry(RD, h, RD), r < 2 ? M.sandLt : M.sand);
-      corner.position.set(sx * (AX + off), h / 2, sz * (AZ + off));
-      corner.castShadow = true;
-      worldGroup.add(corner);
-    }
+    // Ön/arka şeritler: yan şeridin iç kenarında biter — örtüşme yok
+    const backLen = 2 * (AX + off - RD / 2);
+
+    mkStrip(-(AX + off), h / 2, 0,       RD, h, sideLen, 'z', sideLen, r,  1); // sol
+    mkStrip( (AX + off), h / 2, 0,       RD, h, sideLen, 'z', sideLen, r, -1); // sağ
+    mkStrip(0, h / 2, -(AZ + off), backLen, h, RD, 'x', backLen, r,  1);        // arka
+    mkStrip(0, h / 2,  (AZ + off), backLen, h, RD, 'x', backLen, r, -1);        // ön
 
     // En üst katman: sütunlar, meşaleler, bayraklar
     if (r === ROWS - 1) {
-      const COL_H = 25, topY = h, COL_SP = 45;
+      const COL_H = 60, topY = h, COL_SP = 60;
 
       for (const sx of [-1, 1]) {
         const nC = Math.floor(sideLen / COL_SP);
@@ -308,7 +314,7 @@ export function buildBleachers(fenceT) {
         }
       }
 
-      // Köşe meşaleleri — ışıksız (performans)
+      // Köşe meşaleleri — ışıksız
       for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
         mkBrazier(sx * (AX + off), topY, sz * (AZ + off), false);
       }
@@ -332,14 +338,13 @@ export function buildBleachers(fenceT) {
   worldGroup.add(empBase);
 
   for (const sx of [-1, 0, 1]) {
-    mkColumn(sx * (empW / 3), empH, AZ + empOff - RD / 2, 20);
+    mkColumn(sx * (empW / 3), empH, AZ + empOff - RD / 2, 40);
   }
 
-  // Loca meşaleleri — ışıklı
   mkBrazier(-empW / 2 - 3, empH, AZ + empOff, true);
   mkBrazier( empW / 2 + 3, empH, AZ + empOff, true);
 
-  mkBanner(0, empH + 12, AZ + empOff - RD / 2, 0);
+  mkBanner(0, empH + 30, AZ + empOff - RD / 2, 0);
 
   const canopy = new THREE.Mesh(new THREE.BoxGeometry(empW + 8, 0.8, RD + 10), M.red);
   canopy.position.set(0, empH + 22, AZ + empOff);
@@ -348,7 +353,6 @@ export function buildBleachers(fenceT) {
 
 export function tickBleacherSpectators(time, dt) {
 
-  // Seyirci animasyonları
   if (gameState.bleacherSpectators) {
     const waveAngle = time * 0.5;
 
@@ -378,7 +382,7 @@ export function tickBleacherSpectators(time, dt) {
 
       s.grp.position.y = s.baseY
         + Math.sin(t) * s.amp * 0.3
-        + ex * 3;
+        + ex * 30;   // 10x ile orantılı zıplama
 
       s.aL.rotation.z = -0.75
         + Math.sin(t * 0.5) * 0.05
@@ -393,7 +397,6 @@ export function tickBleacherSpectators(time, dt) {
     });
   }
 
-  // Meşale alev animasyonları
   if (gameState.braziers) {
     gameState.braziers.forEach(b => {
       const fl = Math.sin(time * 8  + b.phase) * 0.30
@@ -404,11 +407,11 @@ export function tickBleacherSpectators(time, dt) {
       const sxz = 1 + fl * 0.15;
 
       b.f1.scale.set(sxz, sy, sxz);
-      b.f1.position.y = b.baseY + fl * 0.5;
+      b.f1.position.y = b.baseY + fl * 5;
       b.f1.rotation.z = Math.sin(time * 5 + b.phase) * 0.15;
 
       b.f2.scale.set(sxz * 0.9, sy * 1.1, sxz * 0.9);
-      b.f2.position.y = b.baseY - 0.2 + fl * 0.3;
+      b.f2.position.y = b.baseY - 2 + fl * 3;
 
       if (b.light) b.light.intensity = 1.5 + fl;
 
@@ -418,7 +421,6 @@ export function tickBleacherSpectators(time, dt) {
     });
   }
 
-  // Bayrak dalgalanması
   if (gameState.banners) {
     gameState.banners.forEach(bn => {
       bn.mesh.rotation.y = bn.baseRot
