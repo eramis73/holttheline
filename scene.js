@@ -19,7 +19,7 @@ export function updateCamera() {
         const aspect = w / h;
         const halfW = ARENA_LIMIT_X + 3;
         const halfH = halfW / aspect;
-        const shiftX = 18;
+        const shiftX = 0;
         const shiftY = 10;
         camera.left   = -halfW + shiftX;
         camera.right  =  halfW + shiftX;
