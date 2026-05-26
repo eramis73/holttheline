@@ -17,7 +17,7 @@ export function updateCamera() {
         const h = window.innerHeight;
         renderer.setSize(w, h);
         const aspect = w / h;
-        const halfW = ARENA_LIMIT_X + 35;
+        const halfW = ARENA_LIMIT_X + 16;
         const halfH = halfW / aspect;
         const shiftX = 0;
         const shiftY = 10;
