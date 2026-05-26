@@ -1226,15 +1226,12 @@
       display: flex;
       flex-direction: column;
       gap: 14px;
+      align-items: flex-start;
       pointer-events: auto;
       touch-action: none;
     }
 
     #action-top {
-      display: flex;
-    }
-
-    #action-middle {
       display: flex;
     }
 
