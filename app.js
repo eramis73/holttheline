@@ -919,8 +919,8 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
             break;
           }
           case 'lightning':
-            p.wireMeter = (p.wireMeter || 0) + 300;
-            showFloatingText(pos, '⚡ +300m TEL!', '#ffff00');
+            p.wireMeter = (p.wireMeter || 0) + 6000;
+            showFloatingText(pos, '⚡ +6000 TEL!', '#ffff00');
             break;
           case 'trapCancel':
             p.isDrawingWire = false; p.wirePoints = [];
@@ -2640,31 +2640,47 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
         });
       }
 
-      function _showShopScreen(breakdown) {
+      let _shopContext = 'level';
+
+      function _showShopScreen(breakdown, fromMenu) {
         const el = document.getElementById('shop-screen');
         if (!el) return;
-        gameState.active = false;
-        document.getElementById('shs-title').textContent = '⚡ LEVEL ' + gameState.level + ' TAMAMLANDI!';
+        _shopContext = fromMenu ? 'menu' : 'level';
+        el.classList.toggle('menu-mode', !!fromMenu);
+        if (!fromMenu) gameState.active = false;
+        document.getElementById('shs-title').textContent = fromMenu ? '🛒 MAĞAZA' : '⚡ LEVEL ' + gameState.level + ' TAMAMLANDI!';
         document.getElementById('shs-coins').textContent = getShop().coins;
-        const rows = document.getElementById('shs-earn-rows');
-        rows.innerHTML =
-          `<div class="shs-earn-row"><span>Level Bonusu</span><span>+${breakdown.base}</span></div>` +
-          `<div class="shs-earn-row"><span>Zombiler ×${gameState.kills}</span><span>+${breakdown.killBonus}</span></div>` +
-          `<div class="shs-earn-row"><span>Kalan Süre</span><span>+${breakdown.timeBonus}</span></div>` +
-          (breakdown.shieldBonus > 0 ? `<div class="shs-earn-row"><span>🛡️ Hasar Almadın!</span><span>+${breakdown.shieldBonus}</span></div>` : '') +
-          `<div class="shs-earn-divider"></div>` +
-          `<div class="shs-earn-total"><span>KAZANILAN</span><span>+${breakdown.total} 🪙</span></div>`;
+        if (!fromMenu && breakdown) {
+          const rows = document.getElementById('shs-earn-rows');
+          rows.innerHTML =
+            `<div class="shs-earn-row"><span>Level Bonusu</span><span>+${breakdown.base}</span></div>` +
+            `<div class="shs-earn-row"><span>Zombiler ×${gameState.kills}</span><span>+${breakdown.killBonus}</span></div>` +
+            `<div class="shs-earn-row"><span>Kalan Süre</span><span>+${breakdown.timeBonus}</span></div>` +
+            (breakdown.shieldBonus > 0 ? `<div class="shs-earn-row"><span>🛡️ Hasar Almadın!</span><span>+${breakdown.shieldBonus}</span></div>` : '') +
+            `<div class="shs-earn-divider"></div>` +
+            `<div class="shs-earn-total"><span>KAZANILAN</span><span>+${breakdown.total} 🪙</span></div>`;
+        }
         _renderShopItems();
         const cont = document.getElementById('shs-continue-btn');
-        cont.textContent = gameState.level >= 30 ? '🏆 TEBRIKLER!' : '▶ SONRAKI LEVEL';
+        cont.textContent = fromMenu ? '← GERİ DÖN' : (gameState.level >= 30 ? '🏆 TEBRIKLER!' : '▶ SONRAKI LEVEL');
         cont.onclick = _continueFromShop;
         el.style.display = 'flex';
       }
 
       function _continueFromShop() {
         document.getElementById('shop-screen').style.display = 'none';
-        if (gameState.level >= 30) { returnToMenu(); }
-        else { startGame(gameState.level + 1); }
+        if (_shopContext === 'menu') {
+          document.getElementById('main-menu').style.display = '';
+          updateMenuShopCoins();
+        } else {
+          if (gameState.level >= 30) { returnToMenu(); }
+          else { startGame(gameState.level + 1); }
+        }
+      }
+
+      function updateMenuShopCoins() {
+        const el = document.getElementById('menu-shop-coins');
+        if (el) el.textContent = getShop().coins;
       }
 
       function restartLevel() {
@@ -2757,6 +2773,13 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
         launchLevel,
         setGameMode: m => { gameMode = m; },
         onMpLobbyStart: lvl => { gameMode = 'multi'; launchLevel(lvl); },
+      });
+
+      updateMenuShopCoins();
+      const _btnShopMenu = document.getElementById('btn-shop-menu');
+      if (_btnShopMenu) _btnShopMenu.addEventListener('click', () => {
+        document.getElementById('main-menu').style.display = 'none';
+        _showShopScreen(null, true);
       });
 
       const _localTestBtn = document.getElementById('op-local-test-btn');

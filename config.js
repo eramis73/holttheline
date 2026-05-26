@@ -40,7 +40,7 @@ export const gameConfig = {
     bombCount: 2,
     shieldCount: 2,
     wireCount: 2,
-    wireAmount: 300,
+    wireAmount: 6000,
   },
 };
 

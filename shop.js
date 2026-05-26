@@ -23,7 +23,7 @@ export function awardCoins(breakdown) {
 
 export function getWireForLevel() {
   const s = getShop();
-  return 400 + (s.wireUpgrade || 0) * 100;
+  return 8000 + (s.wireUpgrade || 0) * 2000;
 }
 
 export function getLoadout() {
@@ -44,11 +44,11 @@ export function consumeLoadout() {
 
 export const SHOP_ITEMS = [
   {
-    id: 'wire200', label: '+200 Tel', icon: '🔗', color: '#4ade80', glow: 'rgba(74,222,128,0.35)',
-    desc: 'Sonraki level +200 tel', price: 60, type: 'consumable',
-    getCount:    (s) => Math.floor((s.pendingWire || 0) / 200),
-    canBuy:      (s) => Math.floor((s.pendingWire || 0) / 200) < 3,
-    buy:         (s) => { s.pendingWire = (s.pendingWire || 0) + 200; },
+    id: 'wire200', label: '+4000 Tel', icon: '🔗', color: '#4ade80', glow: 'rgba(74,222,128,0.35)',
+    desc: 'Sonraki level +4000 tel', price: 60, type: 'consumable',
+    getCount:    (s) => Math.floor((s.pendingWire || 0) / 4000),
+    canBuy:      (s) => Math.floor((s.pendingWire || 0) / 4000) < 3,
+    buy:         (s) => { s.pendingWire = (s.pendingWire || 0) + 4000; },
   },
   {
     id: 'bomb1', label: '+1 Bomba', icon: '💣', color: '#fb923c', glow: 'rgba(251,146,60,0.35)',
@@ -73,7 +73,7 @@ export const SHOP_ITEMS = [
   },
   {
     id: 'wireUp1', label: 'Tel Upgrade I', icon: '⚡', color: '#a78bfa', glow: 'rgba(167,139,250,0.35)',
-    desc: 'Kalıcı: her levela +100 tel', price: 400, type: 'permanent',
+    desc: 'Kalıcı: her levela +2000 tel', price: 400, type: 'permanent',
     getCount:    (s) => 0,
     isPurchased: (s) => (s.wireUpgrade || 0) >= 1,
     canBuy:      (s) => (s.wireUpgrade || 0) < 1,
@@ -81,7 +81,7 @@ export const SHOP_ITEMS = [
   },
   {
     id: 'wireUp2', label: 'Tel Upgrade II', icon: '⚡⚡', color: '#e879f9', glow: 'rgba(232,121,249,0.35)',
-    desc: 'Kalıcı: her levela +200 tel daha', price: 800, type: 'permanent',
+    desc: 'Kalıcı: her levela +4000 tel daha', price: 800, type: 'permanent',
     getCount:    (s) => 0,
     isPurchased: (s) => (s.wireUpgrade || 0) >= 2,
     canBuy:      (s) => (s.wireUpgrade || 0) === 1,

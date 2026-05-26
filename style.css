@@ -1849,6 +1849,40 @@
     #hud-wire .hud-value { color: #4ade80; }
     #hud-coin .hud-value { color: #fbbf24; }
 
+    .mob-shop-btn {
+      position: relative;
+      z-index: 5;
+      margin-top: clamp(6px, 1.2vh, 14px);
+      padding: 10px 28px;
+      background: linear-gradient(180deg, #a78bfa 0%, #7c3aed 55%, #5b21b6 100%);
+      border: 3px solid #4c1d95;
+      border-radius: 22px;
+      color: #fff;
+      font-family: 'Fredoka One', sans-serif;
+      font-size: clamp(12px, 1.8vw, 16px);
+      letter-spacing: 2px;
+      cursor: pointer;
+      box-shadow: 0 6px 0 #3b0764, 0 9px 20px rgba(0,0,0,0.45);
+      transition: transform 0.12s, box-shadow 0.12s;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .mob-shop-btn::before {
+      content: '';
+      position: absolute;
+      top: 5px; left: 8%; right: 8%;
+      height: 36%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.38), transparent);
+      border-radius: 12px;
+      pointer-events: none;
+    }
+    .mob-shop-btn:active { transform: translateY(5px); box-shadow: 0 1px 0 #3b0764; }
+
+    /* Menu-mode shop: hide earnings panel, full-width items */
+    #shop-screen.menu-mode .shs-earn-panel { display: none; }
+    #shop-screen.menu-mode .shs-shop-panel { flex: 1; }
+
     /* ── Pause Screen ── */
     #pause-screen {
       display: none;
