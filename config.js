@@ -1,3 +1,4 @@
+// v2
 export const gameConfig = {
   player: {
     baseSpeed: 75,
