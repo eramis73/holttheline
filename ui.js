@@ -11,14 +11,11 @@ export function vibe(pattern, vibeOn) {
 export function updateBombUI(players) {
   const p = players[0];
   const bombs = p ? (p.bombs || 0) : 0;
-  const wire = p ? (p.wireMeter ?? 0) : 0;
   _el('hud-bomb-val').textContent = bombs;
-  const btn = _el('btn-fire');
+  const btn = _el('btn-bomb');
   if (!btn) return;
-  const bombMode = wire <= 0 && bombs > 0;
-  btn.classList.toggle('bomb-mode', bombMode);
-  btn.classList.toggle('empty', wire <= 0 && bombs <= 0);
-  btn.textContent = bombMode ? '💣' : '⚡';
+  btn.setAttribute('data-bomb-count', bombs);
+  btn.classList.toggle('empty', bombs <= 0);
 }
 
 export function updateShieldUI(players) {
@@ -32,7 +29,6 @@ export function updateHUD(gameState, players) {
   _el('hud-timer-val').textContent = secsLeft + 's';
   updateBombUI(players);
   updateShieldUI(players);
-  _el('hud-wire-val').textContent = Math.max(0, Math.round(players[0].wireMeter ?? 0));
 }
 
 export function updateMpHud(gameState, players, gameMode) {
@@ -48,22 +44,12 @@ export function updateMpHud(gameState, players, gameMode) {
   _el('mp-p2-lives').textContent = p2.lives ?? 3;
   _el('mp-p1-zombies').textContent = p1.zombiesLeft ?? 0;
   _el('mp-p2-zombies').textContent = p2.zombiesLeft ?? 0;
-  const p1BombEl = _el('mp-p1-bombs'), p2BombEl = _el('mp-p2-bombs');
-  const p1Available = (p1.bombMax || 3) - (p1.activeBombCount || 0);
-  const p2Available = (p2.bombMax || 3) - (p2.activeBombCount || 0);
-  p1BombEl.textContent = p1.inBombPhase ? p1Available : '-';
-  p2BombEl.textContent = p2.inBombPhase ? p2Available : '-';
-  const btn = _el('btn-fire');
+  _el('mp-p1-bombs').textContent = p1.bombs ?? 0;
+  _el('mp-p2-bombs').textContent = p2.bombs ?? 0;
+  const btn = _el('btn-bomb');
   if (btn) {
-    if (p1.inBombPhase) {
-      btn.textContent = '💣';
-      btn.setAttribute('data-bomb-count', p1Available);
-      btn.classList.add('bomb-mode');
-      btn.classList.remove('empty');
-    } else {
-      btn.textContent = '⚡';
-      btn.setAttribute('data-bomb-count', '');
-      btn.classList.remove('bomb-mode');
-    }
+    const bombs = p1.bombs || 0;
+    btn.setAttribute('data-bomb-count', bombs);
+    btn.classList.toggle('empty', bombs <= 0);
   }
 }

@@ -289,6 +289,47 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
         activeBombs.push({ group: bGroup, spark, sparkLight, fuseMat, fuseTimer: gameConfig.bombs.fuseTime, sparkTimer: 0, done: false, owner: player });
       }
 
+      function _makeBombMesh(x, y, z) {
+        const bGroup = new THREE.Group();
+        bGroup.position.set(x, y, z);
+        worldGroup.add(bGroup);
+        const body = new THREE.Mesh(new THREE.SphereGeometry(7, 16, 16), matCache.bombBodyMat);
+        body.scale.y = 0.9; body.position.y = 7; body.castShadow = true; bGroup.add(body);
+        const shineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const shine = new THREE.Mesh(new THREE.SphereGeometry(1.2, 6, 6), shineMat);
+        shine.position.set(2.5, 12, 2.5); bGroup.add(shine);
+        const fuseMat = new THREE.MeshStandardMaterial({ color: 0x6b4c1e, roughness: 0.9 });
+        const fuseBase = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 5, 6), fuseMat);
+        fuseBase.position.set(1.5, 13.5, 0); fuseBase.rotation.z = -0.35; bGroup.add(fuseBase);
+        const sparkMat = new THREE.MeshBasicMaterial({ color: 0xff6600 });
+        const spark = new THREE.Mesh(new THREE.SphereGeometry(1.4, 6, 6), sparkMat);
+        spark.position.set(3.2, 16.2, 0); bGroup.add(spark);
+        const sparkLight = new THREE.PointLight(0xff8800, 80, 40);
+        sparkLight.position.copy(spark.position); bGroup.add(sparkLight);
+        return { group: bGroup, spark, sparkLight, fuseMat };
+      }
+
+      function _dropBombAtFeet(player) {
+        const m = _makeBombMesh(player.x, 0, player.z);
+        activeBombs.push({ ...m, fuseTimer: gameConfig.bombs.fuseTime, sparkTimer: 0, done: false, owner: player, thrown: false });
+      }
+
+      function _throwBomb(player, power) {
+        const angle = player.group.rotation.y;
+        const dirX = Math.sin(angle), dirZ = Math.cos(angle);
+        const throwDist = 60 + power * 180;
+        const gravity = 380;
+        const vy0 = 160 + power * 90;
+        const flightTime = 2 * vy0 / gravity;
+        const hSpeed = throwDist / flightTime;
+        const m = _makeBombMesh(player.x, 0, player.z);
+        activeBombs.push({
+          ...m, fuseTimer: 999, sparkTimer: 0, done: false, owner: player, thrown: true,
+          bx: player.x, by: 7, bz: player.z,
+          tvx: dirX * hSpeed, tvy: vy0, tvz: dirZ * hSpeed,
+        });
+      }
+
       // ── BALL SYSTEM ──────────────────────────────────────────────────────
       const cannons = [];
       let cannonScatters = [];
@@ -852,28 +893,10 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
             showFloatingText(pos, '🛡️ SHIELD! x' + p.shields, '#ffa000');
             break;
           case 'bomb': {
-            if (isMP()) {
-              p.bombMax = (p.bombMax || 3) + 1;
-              updateMpHud(gameState, players, gameMode);
-              showFloatingText(pos, '💣 +1 BOMBA HAKKI!', '#ff6600');
-            } else {
-              let kills = 0;
-              gameState.entities.zombies.forEach(z => {
-                if (z.active && !z.isFalling && Math.hypot(p.x - z.group.position.x, p.z - z.group.position.z) < 75) {
-                  z.hp = 0; z.shocked = true; z.shockTimer = 0.6; z.shockTimerMax = 0.6; z.smokeTimer = 0;
-                  z.group.traverse(c => { if (c.isMesh && !c.userData.isOutline) { const sm = (c.userData.origMat || c.material).clone(); sm.emissive = new THREE.Color(0x00e5ff); sm.emissiveIntensity = 3.0; c.material = sm; c.userData.shockMat = sm; } });
-                  z.group.traverse(c => { if (c.userData.isOutline) c.visible = true; });
-                  if (z.lArm) z.lArm.rotation.set(-0.3, -Math.PI / 2, 0);
-                  if (z.rArm) z.rArm.rotation.set(-0.3, Math.PI / 2, 0);
-                  if (z.lLeg) z.lLeg.rotation.set(0, 0, -0.55);
-                  if (z.rLeg) z.rLeg.rotation.set(0, 0, 0.55);
-                  applyShockVisuals(z); createElectricShock(z.group.position); kills++;
-                }
-              });
-              gameState.kills += kills;
-              if (kills > 0) vibe(Math.min(40 + kills * 25, 180));
-              showFloatingText(pos, '💣 BOMBA! +' + kills, '#ff5722');
-            }
+            p.bombs = (p.bombs || 0) + 1;
+            updateBombUI(players);
+            if (isMP()) updateMpHud(gameState, players, gameMode);
+            showFloatingText(pos, '💣 BOMBA! +1', '#ff6600');
             break;
           }
           case 'freeze':
@@ -906,15 +929,10 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
             showFloatingText(pos, '⚠️ TRAP CANCEL!', '#ff1744');
             break;
           case 'bombPickup':
-            if (isMP()) {
-              p.bombMax = (p.bombMax || 3) + 1;
-              updateMpHud(gameState, players, gameMode);
-              showFloatingText(pos, '💣 +1 BOMBA HAKKI!', '#ff6600');
-            } else {
-              p.bombs = (p.bombs || 0) + 1;
-              updateBombUI(players);
-              showFloatingText(pos, '💣 BOMBA!', '#ff6600');
-            }
+            p.bombs = (p.bombs || 0) + 1;
+            updateBombUI(players);
+            if (isMP()) updateMpHud(gameState, players, gameMode);
+            showFloatingText(pos, '💣 BOMBA! +1', '#ff6600');
             break;
         }
         createSmokePuff(pos);
@@ -1398,7 +1416,7 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
         gameState.boxSpawnTimes = [];
         gameState.lightningSpawnTimes = [];
         gameState.diamondSpawnTimes = [];
-        gameState.bombBoxTimer = 30;
+        gameState.bombBoxTimer = 12;
 
 
         gameState.entities.powerups = [];
@@ -1851,24 +1869,63 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
 
       btnFire.addEventListener('touchstart', e => {
         e.preventDefault();
-        const p = players[0];
-        const inBombMode = p && (p.wireMeter ?? 0) <= 0 && (p.bombs || 0) > 0;
-        if (inBombMode) {
-          if (gameMode === 'online-guest') { netState.guestBombQueued = true; }
-          else { placeBomb(p); }
-        } else {
-          touch.fire = true;
-        }
+        touch.fire = true;
       }, { passive: false });
       btnFire.addEventListener('touchend', e => { e.preventDefault(); touch.fire = false; }, { passive: false });
-      btnFire.addEventListener('click', () => {
-        const p = players[0];
-        const inBombMode = p && (p.wireMeter ?? 0) <= 0 && (p.bombs || 0) > 0;
-        if (inBombMode) {
-          if (gameMode === 'online-guest') { netState.guestBombQueued = true; }
-          else { placeBomb(p); }
+
+      // ── BOMB BUTTON — short press: place, hold: throw ─────────────────────
+      const btnBomb = document.getElementById('btn-bomb');
+      let _bombHoldStart = 0;
+      let _bombHoldRAF = 0;
+
+      function _updateBombCharge() {
+        if (!_bombHoldStart) return;
+        const held = Date.now() - _bombHoldStart;
+        const power = Math.min(Math.max(held - 300, 0) / 1200, 1.0);
+        if (btnBomb) {
+          btnBomb.classList.toggle('charging', held > 150);
+          btnBomb.style.fontSize = (26 + power * 10) + 'px';
         }
-      });
+        _bombHoldRAF = requestAnimationFrame(_updateBombCharge);
+      }
+
+      function _bombButtonPress() {
+        const p = players[0];
+        if (!p || !p.alive || !gameState.active) return;
+        _bombHoldStart = Date.now();
+        _bombHoldRAF = requestAnimationFrame(_updateBombCharge);
+      }
+
+      function _bombButtonRelease() {
+        if (!_bombHoldStart) return;
+        cancelAnimationFrame(_bombHoldRAF);
+        if (btnBomb) { btnBomb.classList.remove('charging'); btnBomb.style.fontSize = ''; }
+        const held = Date.now() - _bombHoldStart;
+        _bombHoldStart = 0;
+        const p = players[0];
+        if (!p || !p.alive || !gameState.active) return;
+        if ((p.bombs || 0) <= 0) return;
+        p.bombs--;
+        updateBombUI(players);
+        if (isMP()) updateMpHud(gameState, players, gameMode);
+        if (held < 300) {
+          _dropBombAtFeet(p);
+        } else {
+          const power = Math.min((held - 300) / 1200, 1.0);
+          _throwBomb(p, power);
+        }
+        vibe([30, 20, 60]);
+      }
+
+      if (btnBomb) {
+        btnBomb.addEventListener('touchstart', e => { e.preventDefault(); _bombButtonPress(); }, { passive: false });
+        btnBomb.addEventListener('touchend', e => { e.preventDefault(); _bombButtonRelease(); }, { passive: false });
+        btnBomb.addEventListener('touchcancel', e => {
+          cancelAnimationFrame(_bombHoldRAF); _bombHoldStart = 0;
+          if (btnBomb) { btnBomb.classList.remove('charging'); btnBomb.style.fontSize = ''; }
+        }, { passive: false });
+        btnBomb.addEventListener('click', () => { _bombButtonPress(); setTimeout(_bombButtonRelease, 50); });
+      }
       btnDash.addEventListener('touchstart', e => { e.preventDefault(); touch.dash = true; }, { passive: false });
       btnDash.addEventListener('touchend', e => { e.preventDefault(); touch.dash = false; }, { passive: false });
 
@@ -2320,16 +2377,14 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
         if (gameMode === 'multi' || gameMode === 'online-local') {
           // Multiplayer / Local test: two players, zombies split equally
           if (lvl === 1) { players[0].score = 0; players[1].score = 0; }
-          players[0].lives = 4; players[1].lives = 4;
-          players[0].wireMeter = gameMode === 'online-local' ? 99999 : gameConfig.player.wireLimit;
-          players[1].wireMeter = gameMode === 'online-local' ? 99999 : gameConfig.player.wireLimit;
+          players[0].lives = 3; players[1].lives = 3;
+          players[0].wireMeter = 99999;
+          players[1].wireMeter = 99999;
           gameState._carryWire = false;
           gameState.dropBudget = { bomb: gameConfig.zombieDrops.bombCount, shield: gameConfig.zombieDrops.shieldCount, wire: gameConfig.zombieDrops.wireCount };
-          const _mb0 = players[0].bombs || 0, _ms0 = players[0].shields || 0;
-          const _mb1 = players[1].bombs || 0, _ms1 = players[1].shields || 0;
           resetPlayer(players[0]); resetPlayer(players[1]);
-          players[0].bombs = _mb0; players[0].shields = _ms0; players[0].shield = _ms0 > 0;
-          players[1].bombs = _mb1; players[1].shields = _ms1; players[1].shield = _ms1 > 0;
+          players[0].shields = 0; players[0].shield = false;
+          players[1].shields = 0; players[1].shield = false;
           players[0].x = -40; players[0].z = 0; players[0].group.position.set(-40, 0, 0);
           players[1].x = 40; players[1].z = 0; players[1].group.position.set(40, 0, 0);
           players[0].group.visible = true; players[1].group.visible = true;
@@ -2348,7 +2403,7 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
         } else if (gameMode === 'online-host') {
           // Online host: P1 local, P2 controlled by remote inputs
           if (lvl === 1) { players[0].score = 0; players[1].score = 0; }
-          players[0].lives = 4; players[1].lives = 4;
+          players[0].lives = 3; players[1].lives = 3;
           players[0].wireMeter = 99999; players[1].wireMeter = 99999;
           gameState._carryWire = false;
           gameState.dropBudget = { bomb: gameConfig.zombieDrops.bombCount, shield: gameConfig.zombieDrops.shieldCount, wire: gameConfig.zombieDrops.wireCount };
@@ -2388,7 +2443,7 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
           netState.guestLastState = null;
         } else {
           if (lvl === 1) { players[0].score = 0; }
-          players[0].wireMeter = gameConfig.player.wireLimit;
+          players[0].wireMeter = 99999;
           gameState._carryWire = false;
           gameState.dropBudget = { bomb: gameConfig.zombieDrops.bombCount, shield: gameConfig.zombieDrops.shieldCount, wire: gameConfig.zombieDrops.wireCount };
           const savedBombs = players[0].bombs || 0;
@@ -3096,8 +3151,7 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
 
             if (wireCommand && time > p.lastWireTick + 0.3) {
               p.lastWireTick = time;
-              if (!p.isDrawingWire && (p.wireMeter ?? 0) <= 0) { /* no wire left */ }
-              else p.isDrawingWire = !p.isDrawingWire;
+              p.isDrawingWire = !p.isDrawingWire;
 
               if (p.isDrawingWire) {
                 p.wirePoints = [{ x: p.x, z: p.z }];
@@ -3118,16 +3172,6 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
 
               const tail = p.wirePoints[p.wirePoints.length - 1];
               if (Math.hypot(tail.x - p.x, tail.z - p.z) > 4.0) {
-                const segLen = Math.hypot(p.x - tail.x, p.z - tail.z) / 5;
-                p.wireMeter = (p.wireMeter ?? 0) - segLen;
-                if (isMP()) updateMpHud(gameState, players, gameMode); else updateHUD(gameState, players);
-                if (p.wireMeter <= 0) {
-                  p.wireMeter = 0;
-                  p.isDrawingWire = false; p.wirePoints = []; p.wireMesh.geometry.dispose(); p.wireMesh.geometry = new THREE.BufferGeometry();
-                  p.wireOuterMesh.geometry.dispose(); p.wireOuterMesh.geometry = new THREE.BufferGeometry(); p.startMarker.visible = false;
-                  showFloatingText(p.group.position, 'HAT BİTTİ!', '#f87171');
-                  return;
-                }
                 p.wirePoints.push({ x: p.x, z: p.z });
 
                 // MP: cancel wire if new segment intersects other player wire
@@ -3536,7 +3580,7 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
             // Spawn Bomb Box every 30s
             gameState.bombBoxTimer -= dt;
             if (gameState.bombBoxTimer <= 0) {
-              gameState.bombBoxTimer = 30;
+              gameState.bombBoxTimer = 12;
               _spawnBox('bomb');
             }
           }
@@ -4238,6 +4282,19 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
 
         activeBombs = activeBombs.filter(b => {
           if (b.done) return false;
+          // Thrown bomb physics — parabolic arc
+          if (b.thrown) {
+            b.tvy -= 380 * dt;
+            b.bx += b.tvx * dt; b.by += b.tvy * dt; b.bz += b.tvz * dt;
+            b.group.position.set(b.bx, Math.max(0, b.by), b.bz);
+            b.group.rotation.y += 6 * dt;
+            if (b.by <= 0) {
+              b.by = 0;
+              b.thrown = false;
+              b.fuseTimer = 0; // instant explode on landing
+            }
+            return true;
+          }
           // Kick motion — fades with friction
           if (b.kickVx || b.kickVz) {
             b.group.position.x += (b.kickVx || 0) * dt;

@@ -10,7 +10,6 @@ export const gameConfig = {
     bodyRadius: 7,
     kickStrength: 25,
     barrelKickStrength: 5,
-    wireLimit: 500,
   },
   zombies: {
     baseSpeed: 12.65,
