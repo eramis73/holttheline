@@ -2620,10 +2620,9 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
           card.style.setProperty('--ic', item.color);
           card.style.setProperty('--ig', item.glow);
           card.innerHTML =
-            `<div class="shs-item-icon">${item.icon}</div>` +
+            `<div class="shs-item-icon-wrap" style="--ic-bg:${item.color}22">${item.icon}</div>` +
             `<div class="shs-item-name">${item.label}</div>` +
-            `<div class="shs-item-desc">${item.desc}</div>` +
-            `<div class="shs-item-price">🪙 ${item.price}</div>` +
+            `<div class="shs-item-price-row">🪙 ${item.price}</div>` +
             (owned
               ? `<div class="shs-owned-badge">✓ ALINDI</div>`
               : `<button class="shs-item-buy-btn" data-id="${item.id}" ${afford ? '' : 'disabled'}>${canB ? 'SATIN AL' : 'KİLİTLİ'}</button>`) +
