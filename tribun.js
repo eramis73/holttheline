@@ -26,13 +26,13 @@ function initRes() {
     arm:      new THREE.CapsuleGeometry(0.5, 3.2, 4, 5),
     drape:    new THREE.BoxGeometry(0.5, 5, 2),
     // Sütun, meşale, bayrak geometrileri 10x — paylaşımlı, değişmez
-    colBase:  new THREE.CylinderGeometry(7.2, 8, 4.8, 8),
-    capital:  new THREE.BoxGeometry(15.2, 7.2, 15.2),
-    brazBowl: new THREE.SphereGeometry(8, 8, 4, 0, Math.PI * 2, 0, Math.PI * 0.5),
-    flame:    new THREE.ConeGeometry(5.2, 16, 6),
-    flameIn:  new THREE.ConeGeometry(2.8, 11.2, 5),
-    banner:   new THREE.PlaneGeometry(24, 64),
-    shield:   new THREE.CircleGeometry(10, 8),
+    colBase:  new THREE.CylinderGeometry(5.76, 6.4, 3.84, 8),
+    capital:  new THREE.BoxGeometry(12.16, 5.76, 12.16),
+    brazBowl: new THREE.SphereGeometry(6.4, 8, 4, 0, Math.PI * 2, 0, Math.PI * 0.5),
+    flame:    new THREE.ConeGeometry(4.16, 12.8, 6),
+    flameIn:  new THREE.ConeGeometry(2.24, 8.96, 5),
+    banner:   new THREE.PlaneGeometry(19.2, 51.2),
+    shield:   new THREE.CircleGeometry(8, 8),
   };
 
   M = {
@@ -99,7 +99,7 @@ const mkSpec = (x, y, z) => {
   grp.add(aR);
 
   // 10x büyütme — geometri orijinal, scale ile büyütülüyor
-  grp.scale.setScalar(3.2 + Math.random() * 1.4);
+  grp.scale.setScalar(2.56 + Math.random() * 1.12);
   grp.position.set(x, y, z);
   grp.rotation.y = Math.atan2(x, z) + (Math.random() - 0.5) * 0.3;
 
@@ -110,7 +110,7 @@ const mkSpec = (x, y, z) => {
     baseY: y,
     phase: Math.random() * Math.PI * 2,
     speed: 0.8 + Math.random() * 2.0,
-    amp:   2 + Math.random() * 4,
+    amp:   1.6 + Math.random() * 3.2,
     wx: x, wz: z,
     cheerCd:  3 + Math.random() * 10,
     cheerT:   Math.random() * 10,
@@ -121,46 +121,46 @@ const mkSpec = (x, y, z) => {
 
 // ── Meşale — 10x geometri ─────────────────────────────────────────────
 const mkBrazier = (x, y, z, withLight) => {
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(2, 2.8, y, 6), M.iron);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.24, y, 6), M.iron);
   pole.position.set(x, y / 2, z);
   worldGroup.add(pole);
 
   const bowl = new THREE.Mesh(G.brazBowl, M.bronze);
-  bowl.position.set(x, y + 2, z);
+  bowl.position.set(x, y + 1.6, z);
   bowl.rotation.x = Math.PI;
   worldGroup.add(bowl);
 
   const f1 = new THREE.Mesh(G.flame, M.flame.clone());
-  f1.position.set(x, y + 12, z);
+  f1.position.set(x, y + 9.6, z);
   worldGroup.add(f1);
 
   const f2 = new THREE.Mesh(G.flameIn, M.flameIn.clone());
-  f2.position.set(x, y + 11, z);
+  f2.position.set(x, y + 8.8, z);
   worldGroup.add(f2);
 
   let light = null;
   if (withLight) {
     light = new THREE.PointLight(0xff6622, 1.5, 60, 1.5);
-    light.position.set(x, y + 20, z);
+    light.position.set(x, y + 16, z);
     worldGroup.add(light);
   }
 
-  gameState.braziers.push({ f1, f2, light, baseY: y + 12, phase: Math.random() * 10 });
+  gameState.braziers.push({ f1, f2, light, baseY: y + 9.6, phase: Math.random() * 10 });
 };
 
 // ── Sütun — 10x shaft yarıçapı, COL_H ile orantılı yükseklik ─────────
 const mkColumn = (x, y, z, h) => {
   const base = new THREE.Mesh(G.colBase, M.marble);
-  base.position.set(x, y + 2.4, z);
+  base.position.set(x, y + 1.92, z);
   worldGroup.add(base);
 
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(5.2, 6, h - 3, 8), M.marble);
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(4.16, 4.8, h - 3, 8), M.marble);
   shaft.position.set(x, y + h / 2, z);
   shaft.castShadow = true;
   worldGroup.add(shaft);
 
   const cap = new THREE.Mesh(G.capital, M.marble);
-  cap.position.set(x, y + h - 3.6, z);
+  cap.position.set(x, y + h - 2.88, z);
   worldGroup.add(cap);
 };
 
@@ -174,7 +174,7 @@ const mkBanner = (x, y, z, rotY) => {
   const s = new THREE.Mesh(G.shield, M.gold);
   s.position.set(x, y + 2, z);
   s.rotation.y = rotY;
-  s.translateZ(2);
+  s.translateZ(1.6);
   worldGroup.add(s);
 
   gameState.banners.push({ mesh: b, baseRot: rotY, phase: Math.random() * 10 });
@@ -294,7 +294,7 @@ export function buildBleachers(fenceT) {
 
     // En üst katman: sütunlar, meşaleler, bayraklar
     if (r === ROWS - 1) {
-      const COL_H = 24, topY = h, COL_SP = 60;
+      const COL_H = 19.2, topY = h, COL_SP = 60;
 
       for (const sx of [-1, 1]) {
         const nC = Math.floor(sideLen / COL_SP);
@@ -344,7 +344,7 @@ export function buildBleachers(fenceT) {
   mkBrazier(-empW / 2 - 3, empH, AZ + empOff, true);
   mkBrazier( empW / 2 + 3, empH, AZ + empOff, true);
 
-  mkBanner(0, empH + 12, AZ + empOff - RD / 2, 0);
+  mkBanner(0, empH + 9.6, AZ + empOff - RD / 2, 0);
 
   const canopy = new THREE.Mesh(new THREE.BoxGeometry(empW + 8, 0.8, RD + 10), M.red);
   canopy.position.set(0, empH + 22, AZ + empOff);
@@ -382,7 +382,7 @@ export function tickBleacherSpectators(time, dt) {
 
       s.grp.position.y = s.baseY
         + Math.sin(t) * s.amp * 0.3
-        + ex * 12;
+        + ex * 9.6;
 
       s.aL.rotation.z = -0.75
         + Math.sin(t * 0.5) * 0.05
@@ -407,11 +407,11 @@ export function tickBleacherSpectators(time, dt) {
       const sxz = 1 + fl * 0.15;
 
       b.f1.scale.set(sxz, sy, sxz);
-      b.f1.position.y = b.baseY + fl * 2;
+      b.f1.position.y = b.baseY + fl * 1.6;
       b.f1.rotation.z = Math.sin(time * 5 + b.phase) * 0.15;
 
       b.f2.scale.set(sxz * 0.9, sy * 1.1, sxz * 0.9);
-      b.f2.position.y = b.baseY - 0.8 + fl * 1.2;
+      b.f2.position.y = b.baseY - 0.64 + fl * 0.96;
 
       if (b.light) b.light.intensity = 1.5 + fl;
 
