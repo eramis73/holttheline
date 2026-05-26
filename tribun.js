@@ -181,7 +181,7 @@ const mkBanner = (x, y, z, rotY) => {
 };
 
 // ── Tribün şeridi ─────────────────────────────────────────────────────
-const mkStrip = (cx, cy, cz, w, h, d, specAxis, specLen, rowIdx, faceSign) => {
+const mkStrip = (cx, cy, cz, w, h, d, specAxis, specLen, rowIdx, faceSign, noSpec = false) => {
   const blockMat = rowIdx < 2 ? M.sandLt : (rowIdx < 4 ? M.sand : M.sandDk);
 
   const slab = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), blockMat);
@@ -233,16 +233,17 @@ const mkStrip = (cx, cy, cz, w, h, d, specAxis, specLen, rowIdx, faceSign) => {
     worldGroup.add(row);
   }
 
-  // Seyirciler her 16 birimde bir
-  const n = Math.floor(specLen / 16);
-  for (let i = 0; i < n; i++) {
-    if (Math.random() > 0.92) continue;
-    const t = ((i + 0.5) / n - 0.5) * specLen * 0.94;
-    mkSpec(
-      specAxis === 'x' ? cx + t : cx,
-      cy + h / 2 + 1,
-      specAxis === 'z' ? cz + t : cz
-    );
+  if (!noSpec) {
+    const n = Math.floor(specLen / 16);
+    for (let i = 0; i < n; i++) {
+      if (Math.random() > 0.92) continue;
+      const t = ((i + 0.5) / n - 0.5) * specLen * 0.94;
+      mkSpec(
+        specAxis === 'x' ? cx + t : cx,
+        cy + h / 2 + 1,
+        specAxis === 'z' ? cz + t : cz
+      );
+    }
   }
 };
 
@@ -290,7 +291,7 @@ export function buildBleachers(fenceT) {
     mkStrip(-(AX + off), h / 2, 0,       RD, h, sideLen, 'z', sideLen, r,  1); // sol
     mkStrip( (AX + off), h / 2, 0,       RD, h, sideLen, 'z', sideLen, r, -1); // sağ
     mkStrip(0, h / 2, -(AZ + off), backLen, h, RD, 'x', backLen, r,  1);        // arka
-    mkStrip(0, h / 2,  (AZ + off), backLen, h, RD, 'x', backLen, r, -1);        // ön
+    mkStrip(0, h / 2,  (AZ + off), backLen, h, RD, 'x', backLen, r, -1, r === 0); // ön
 
     // En üst katman: sütunlar, meşaleler, bayraklar
     if (r === ROWS - 1) {
