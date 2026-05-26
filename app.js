@@ -2884,6 +2884,7 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
               if (lp.x > zone5Start) targetX = ((lp.x - zone5Start) / (ARENA_LIMIT_X * 0.4)) * 120;
               else if (lp.x < zone1Start) targetX = -((lp.x - zone1Start) / (-ARENA_LIMIT_X * 0.4)) * 120;
               cameraDynX += (targetX - cameraDynX) * Math.min(1, dt * 3.5);
+              cameraDynX = Math.max(-112, Math.min(75, cameraDynX));
             }
           } else { cameraDynX = -20; cameraDynZ = 0; }
           camera.position.set(cameraDynX, 300, cameraDynZ + 252);
@@ -4331,6 +4332,7 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
               targetX = -((p0.x - zone1Start) / (-ARENA_LIMIT_X * 0.4)) * 120;
             }
             cameraDynX += (targetX - cameraDynX) * Math.min(1, dt * 3.5);
+            cameraDynX = Math.max(-112, Math.min(75, cameraDynX));
           } else {
             cameraDynZ += (0 - cameraDynZ) * Math.min(1, dt * 3.5);
             cameraDynX += (0 - cameraDynX) * Math.min(1, dt * 3.5);
