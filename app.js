@@ -4,7 +4,8 @@ import { segsIntersect, isPointInPolygon, _seedRng } from './utils.js';
 import { renderer, scene, camera, floatContainer, worldGroup, updateCamera, geoCache, matCache, players, explosions, boneMat, boneOldMat, addOutline } from './scene.js';
 import { initNetwork, netState, guestZombieMap, guestBombMap, rtcSendOrWs, cleanupOnlineSession, mpDeclareWinner, onlineRestartVote } from './network.js';
 import { gameState, _ensurePowerupBoxes } from './state.js';
-import { _el, vibe, updateBombUI, updateShieldUI, updateHUD, updateMpHud } from './ui.js';
+import { _el, vibe, updateBombUI, updateShieldUI, updateHUD, updateMpHud, updateWireHUD, updateCoinHUD } from './ui.js';
+import { getShop, calcCoins, awardCoins, getLoadout, consumeLoadout, buyItem, SHOP_ITEMS } from './shop.js';
 import { initAudio, unlockAudio, togglePlayPause, toggleSfx, playSfx, suspendAudio, resumeAudio, startMusicIfEnabled, stopMusic } from './audio.js';
 import { setupMenuUI, openMpLevelSelect, openSingleLevelSelect, showOnlineScreen, showOnlineError, hideOnlinePanel, applyMpDifficultyConfig } from './menu.js';
 import { buildBleachers, tickBleacherSpectators } from './tribun.js';
@@ -2443,15 +2444,20 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
           netState.guestLastState = null;
         } else {
           if (lvl === 1) { players[0].score = 0; }
-          players[0].wireMeter = 99999;
+          const _ld = getLoadout(); consumeLoadout();
+          players[0].wireMeter = _ld.wire;
           gameState._carryWire = false;
           gameState.dropBudget = { bomb: gameConfig.zombieDrops.bombCount, shield: gameConfig.zombieDrops.shieldCount, wire: gameConfig.zombieDrops.wireCount };
-          const savedBombs = players[0].bombs || 0;
-          const savedShields = players[0].shields || 0;
+          const savedBombs  = (players[0].bombs   || 0) + _ld.bombs;
+          const savedShields= (players[0].shields || 0) + _ld.shields;
           resetPlayer(players[0]);
-          players[0].bombs = savedBombs;
+          players[0].bombs   = savedBombs;
           players[0].shields = savedShields;
-          players[0].shield = savedShields > 0;
+          players[0].shield  = savedShields > 0;
+          if (_ld.speed) players[0].speed = gameConfig.player.buffSpeed;
+          document.getElementById('hud-wire').style.display = '';
+          document.getElementById('hud-coin').style.display = '';
+          updateWireHUD(players); updateCoinHUD();
           players[1].group.visible = false;
           players[1].alive = false;
           players[1].isDrawingWire = false; players[1].wirePoints = [];
@@ -2539,6 +2545,7 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
         gameState.paused = false;
         document.getElementById('pause-screen').style.display = 'none';
         document.getElementById('game-over-screen').style.display = 'none';
+        document.getElementById('shop-screen').style.display = 'none';
         resumeAudio();
         gameState.active = false;
         document.getElementById('hud').style.display = 'none';
@@ -2596,6 +2603,68 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
           document.getElementById('game-over-screen').style.display = 'flex';
           suspendAudio();
         }, 2000);
+      }
+
+      function _renderShopItems() {
+        const grid = document.getElementById('shs-items-grid');
+        if (!grid) return;
+        const s = getShop();
+        grid.innerHTML = '';
+        SHOP_ITEMS.forEach(item => {
+          const owned = item.isPurchased && item.isPurchased(s);
+          const canB  = !owned && item.canBuy(s);
+          const afford= canB && s.coins >= item.price;
+          const count = item.getCount(s);
+          const card  = document.createElement('div');
+          card.className = 'shs-item-card' + (afford ? ' can-buy' : '') + (owned ? ' owned' : '');
+          card.style.setProperty('--ic', item.color);
+          card.style.setProperty('--ig', item.glow);
+          card.innerHTML =
+            `<div class="shs-item-icon">${item.icon}</div>` +
+            `<div class="shs-item-name">${item.label}</div>` +
+            `<div class="shs-item-desc">${item.desc}</div>` +
+            `<div class="shs-item-price">🪙 ${item.price}</div>` +
+            (owned
+              ? `<div class="shs-owned-badge">✓ ALINDI</div>`
+              : `<button class="shs-item-buy-btn" data-id="${item.id}" ${afford ? '' : 'disabled'}>${canB ? 'SATIN AL' : 'KİLİTLİ'}</button>`) +
+            (count > 0 ? `<div class="shs-count-badge">×${count}</div>` : '');
+          const btn = card.querySelector('.shs-item-buy-btn');
+          if (btn && !btn.disabled) {
+            btn.addEventListener('click', e => {
+              e.stopPropagation();
+              const res = buyItem(item.id);
+              if (res.ok) { document.getElementById('shs-coins').textContent = res.coins; _renderShopItems(); vibe([30,20,60]); }
+            });
+          }
+          grid.appendChild(card);
+        });
+      }
+
+      function _showShopScreen(breakdown) {
+        const el = document.getElementById('shop-screen');
+        if (!el) return;
+        gameState.active = false;
+        document.getElementById('shs-title').textContent = '⚡ LEVEL ' + gameState.level + ' TAMAMLANDI!';
+        document.getElementById('shs-coins').textContent = getShop().coins;
+        const rows = document.getElementById('shs-earn-rows');
+        rows.innerHTML =
+          `<div class="shs-earn-row"><span>Level Bonusu</span><span>+${breakdown.base}</span></div>` +
+          `<div class="shs-earn-row"><span>Zombiler ×${gameState.kills}</span><span>+${breakdown.killBonus}</span></div>` +
+          `<div class="shs-earn-row"><span>Kalan Süre</span><span>+${breakdown.timeBonus}</span></div>` +
+          (breakdown.shieldBonus > 0 ? `<div class="shs-earn-row"><span>🛡️ Hasar Almadın!</span><span>+${breakdown.shieldBonus}</span></div>` : '') +
+          `<div class="shs-earn-divider"></div>` +
+          `<div class="shs-earn-total"><span>KAZANILAN</span><span>+${breakdown.total} 🪙</span></div>`;
+        _renderShopItems();
+        const cont = document.getElementById('shs-continue-btn');
+        cont.textContent = gameState.level >= 30 ? '🏆 TEBRIKLER!' : '▶ SONRAKI LEVEL';
+        cont.onclick = _continueFromShop;
+        el.style.display = 'flex';
+      }
+
+      function _continueFromShop() {
+        document.getElementById('shop-screen').style.display = 'none';
+        if (gameState.level >= 30) { returnToMenu(); }
+        else { startGame(gameState.level + 1); }
       }
 
       function restartLevel() {
@@ -3150,19 +3219,23 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
 
 
             if (wireCommand && time > p.lastWireTick + 0.3) {
-              p.lastWireTick = time;
-              p.isDrawingWire = !p.isDrawingWire;
-
-              if (p.isDrawingWire) {
-                p.wirePoints = [{ x: p.x, z: p.z }];
-                p.startMarker.position.set(p.x, 3.5, p.z);
-                p.startMarker.rotation.set(Math.random(), Math.random(), 0);
-                p.startMarker.visible = true;
-                p.wireMesh.geometry.dispose(); p.wireMesh.geometry = new THREE.BufferGeometry();
-                p.wireOuterMesh.geometry.dispose(); p.wireOuterMesh.geometry = new THREE.BufferGeometry();
+              if (!p.isDrawingWire && !isMP() && (p.wireMeter || 0) <= 0) {
+                showFloatingText(p.group.position, '🔗 TEL YOK!', '#ff4444');
               } else {
-                p.wirePoints = []; p.wireMesh.geometry.dispose(); p.wireMesh.geometry = new THREE.BufferGeometry();
-                p.wireOuterMesh.geometry.dispose(); p.wireOuterMesh.geometry = new THREE.BufferGeometry(); p.startMarker.visible = false;
+                p.lastWireTick = time;
+                p.isDrawingWire = !p.isDrawingWire;
+
+                if (p.isDrawingWire) {
+                  p.wirePoints = [{ x: p.x, z: p.z }];
+                  p.startMarker.position.set(p.x, 3.5, p.z);
+                  p.startMarker.rotation.set(Math.random(), Math.random(), 0);
+                  p.startMarker.visible = true;
+                  p.wireMesh.geometry.dispose(); p.wireMesh.geometry = new THREE.BufferGeometry();
+                  p.wireOuterMesh.geometry.dispose(); p.wireOuterMesh.geometry = new THREE.BufferGeometry();
+                } else {
+                  p.wirePoints = []; p.wireMesh.geometry.dispose(); p.wireMesh.geometry = new THREE.BufferGeometry();
+                  p.wireOuterMesh.geometry.dispose(); p.wireOuterMesh.geometry = new THREE.BufferGeometry(); p.startMarker.visible = false;
+                }
               }
             }
 
@@ -3171,8 +3244,13 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
               p.startMarker.rotation.x += 5 * dt;
 
               const tail = p.wirePoints[p.wirePoints.length - 1];
-              if (Math.hypot(tail.x - p.x, tail.z - p.z) > 4.0) {
+              if (Math.hypot(tail.x - p.x, tail.z - p.z) > 4.0 && (isMP() || (p.wireMeter || 0) > 0)) {
                 p.wirePoints.push({ x: p.x, z: p.z });
+                if (!isMP() && p.wirePoints.length >= 2) {
+                  const _wt = p.wirePoints;
+                  p.wireMeter = Math.max(0, p.wireMeter - Math.hypot(_wt[_wt.length-1].x - _wt[_wt.length-2].x, _wt[_wt.length-1].z - _wt[_wt.length-2].z));
+                  updateWireHUD(players);
+                }
 
                 // MP: cancel wire if new segment intersects other player wire
                 let wireCut = false;
@@ -3911,7 +3989,14 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
                 players.forEach(p2 => { p2.isDrawingWire = false; p2.wirePoints = []; p2.wireMesh.geometry.setFromPoints([]); p2.startMarker.visible = false; });
                 showFloatingText(new THREE.Vector3(cp.x, 18, cp.z), "🩷 RESCUED! LEVEL COMPLETE!", "#ff80ab");
                 vibe([100, 60, 100, 60, 300]);
-                setTimeout(() => { if (gameState.active && gameState.level < 30) { startGame(gameState.level + 1); } }, 2500);
+                setTimeout(() => {
+                  if (gameState.active) {
+                    const _tl = Math.max(0, gameState.levelDuration * (1 - (gameState.fuseProgress || 0)));
+                    const _bd = calcCoins(gameState.level, gameState.kills, _tl, (players[0].shields || 0) > 0);
+                    awardCoins(_bd);
+                    _showShopScreen(_bd);
+                  }
+                }, 2500);
               }
             });
           }

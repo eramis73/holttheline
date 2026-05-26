@@ -23,12 +23,26 @@ export function updateShieldUI(players) {
   _el('hud-shield-val').textContent = val;
 }
 
+export function updateWireHUD(players) {
+  const el = _el('hud-wire-val');
+  if (el) el.textContent = Math.ceil(players[0] ? (players[0].wireMeter || 0) : 0);
+}
+
+export function updateCoinHUD() {
+  const el = _el('hud-coin-val');
+  if (!el) return;
+  try { el.textContent = (JSON.parse(localStorage.getItem('htl_shop_v1') || '{}').coins) || 0; }
+  catch { el.textContent = 0; }
+}
+
 export function updateHUD(gameState, players) {
   const secsLeft = Math.max(0, Math.ceil(gameState.levelDuration * (1 - (gameState.fuseProgress || 0))));
   _el('hud-level-val').textContent = gameState.level;
   _el('hud-timer-val').textContent = secsLeft + 's';
   updateBombUI(players);
   updateShieldUI(players);
+  updateWireHUD(players);
+  updateCoinHUD();
 }
 
 export function updateMpHud(gameState, players, gameMode) {

@@ -245,6 +245,27 @@
         </div>
       </div>
 
+      <!-- Shop Screen (between levels, SP only) -->
+      <div id="shop-screen" style="display:none;">
+        <div class="shs-header">
+          <div id="shs-title" class="shs-title-text">⚡ LEVEL 1 TAMAMLANDI!</div>
+          <div class="shs-coins-pill">🪙 <span id="shs-coins">0</span></div>
+        </div>
+        <div class="shs-body">
+          <div class="shs-panel shs-earn-panel">
+            <div class="shs-panel-title">KAZANILAN</div>
+            <div id="shs-earn-rows"></div>
+          </div>
+          <div class="shs-panel shs-shop-panel">
+            <div class="shs-panel-title">MAĞAZA</div>
+            <div class="shs-items-grid" id="shs-items-grid"></div>
+          </div>
+        </div>
+        <div class="shs-footer">
+          <button id="shs-continue-btn" class="shs-continue-btn">▶ SONRAKI LEVEL</button>
+        </div>
+      </div>
+
       <!-- Pause Menu overlay -->
       <div id="pause-screen" style="display:none;">
         <div class="pause-title">PAUSED</div>
@@ -270,6 +291,14 @@
         <div class="hud-item" id="hud-shield">
           <span class="hud-icon">🛡️</span>
           <span class="hud-value" id="hud-shield-val">0</span>
+        </div>
+        <div class="hud-item" id="hud-wire">
+          <span class="hud-icon">🔗</span>
+          <span class="hud-value" id="hud-wire-val">400</span>
+        </div>
+        <div class="hud-item" id="hud-coin">
+          <span class="hud-icon">🪙</span>
+          <span class="hud-value" id="hud-coin-val">0</span>
         </div>
         <div id="rtc-indicator"
           style="font-size:11px;font-family:monospace;font-weight:bold;opacity:0.75;pointer-events:none;align-self:center;margin-left:2px;">
