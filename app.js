@@ -2941,7 +2941,7 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
               cameraDynX += (targetX - cameraDynX) * Math.min(1, dt * 3.5);
               cameraDynX = Math.max(-112, Math.min(75, cameraDynX));
             }
-          } else { cameraDynX = -20; cameraDynZ = 0; }
+          } else { cameraDynX = 0; cameraDynZ = 0; }
           camera.position.set(cameraDynX, 300, cameraDynZ + 252);
           camera.lookAt(cameraDynX, 0, cameraDynZ);
           if (now - _lastHudUpdate > 250) { _lastHudUpdate = now; updateHUD(gameState, players); if (isMP()) updateMpHud(gameState, players, gameMode); }
@@ -4395,7 +4395,7 @@ const isMP = () => gameMode === 'multi' || gameMode === 'online-host' || gameMod
             cameraDynX += (0 - cameraDynX) * Math.min(1, dt * 3.5);
           }
         } else {
-          cameraDynX = -20;
+          cameraDynX = 0;
           cameraDynZ = 0;
         }
 
